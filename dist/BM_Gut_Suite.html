@@ -1,0 +1,2638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Beyond Mechanics · Gut Health Suite (offline)</title>
+<style>/* ============================================================================
+   app.css — one stylesheet for all three surfaces (patient / clinician /
+   database) + print report. Responsive: phone, tablet, laptop. Palette ported
+   from BM_Gut_Suite_v7.
+   ========================================================================== */
+:root{
+  --g:#0F6E56;--gm:#1D9E75;--gl:#5DCAA5;--gp:#E1F5EE;--gf:#F4FBF7;
+  --am:#BA7517;--ap:#FAEEDA;--re:#A32D2D;--rp:#FCEBEB;
+  --pu:#534AB7;--pp:#EEEDFE;--bl:#185FA5;--blp:#E6F1FB;
+  --co:#993C1D;--cop:#FAECE7;
+  --ink:#1A1A17;--inks:#3A3A37;--inkt:#707070;
+  --bdr:#E0DDD6;--bdrm:#C0BDB6;--bg:#F5F3EE;--surf:#FFFFFF;--surf2:#FAFAF8;
+  --r6:6px;--r8:8px;--r12:12px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font-family:var(--font)}
+button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer}
+small{font-size:.82em}
+
+/* ── App bar ─────────────────────────────────────────────────────────────── */
+.app-bar{background:var(--g);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));position:sticky;top:0;z-index:500;box-shadow:0 1px 0 rgba(0,0,0,.08);flex-wrap:wrap}
+.app-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;white-space:nowrap}
+.app-logo .dot{width:8px;height:8px;border-radius:50%;background:var(--gl);box-shadow:0 0 0 3px rgba(93,202,165,.25)}
+.app-sub{font-size:10.5px;color:rgba(255,255,255,.6)}
+.app-spacer{flex:1}
+.mode-switch{display:flex;background:rgba(255,255,255,.13);border-radius:20px;padding:2px;gap:2px}
+.mode-btn{border:none;background:transparent;color:rgba(255,255,255,.78);font-size:12px;font-weight:600;padding:6px 14px;border-radius:18px;transition:all .15s;white-space:nowrap}
+.mode-btn.active{background:#fff;color:var(--g)}
+.app-chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.13);border-radius:20px;padding:4px 6px 4px 12px;font-size:12px;font-weight:600;color:#fff;max-width:220px}
+.app-chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-chip .x{background:rgba(255,255,255,.2);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;line-height:1;flex-shrink:0}
+
+/* ── Mode containers ─────────────────────────────────────────────────────── */
+.mode{display:none;max-width:1160px;margin:0 auto;padding:16px}
+.mode.show{display:block}
+@media print{.app-bar{display:none}}
+
+/* ── Generic ─────────────────────────────────────────────────────────────── */
+.btn{border:none;border-radius:var(--r8);font-size:13px;font-weight:600;padding:9px 15px;transition:all .15s;white-space:nowrap}
+.btn-g{background:var(--g);color:#fff}.btn-g:hover{background:var(--gm)}
+.btn-o{background:var(--surf);color:var(--g);border:1px solid var(--g)}.btn-o:hover{background:var(--gp)}
+.btn-gh{background:transparent;color:var(--inkt);border:1px solid var(--bdr)}.btn-gh:hover{background:var(--surf);color:var(--ink)}
+.btn-re{background:var(--re);color:#fff}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r12);padding:16px;margin-bottom:14px}
+.muted{color:var(--inkt)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+h1{font-size:22px}h2{font-size:17px;margin-bottom:8px}h3{font-size:14px}
+.pill{display:inline-block;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:700}
+.sev-min{background:var(--gp);color:#085041}.sev-mod{background:var(--ap);color:#7A5800}
+.sev-sig{background:var(--cop);color:#7A3410}.sev-sev{background:var(--rp);color:#7A1515}
+
+/* ── Patient questionnaire ───────────────────────────────────────────────── */
+.intro{background:var(--gf);border:1px solid var(--gl);border-radius:var(--r12);padding:14px 16px;margin-bottom:14px;font-size:13px;color:var(--inks)}
+.sec-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r12);margin-bottom:12px;overflow:hidden}
+.sec-head{padding:11px 15px;font-weight:700;font-size:13px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.sec-body{padding:6px 15px 12px}
+.q{padding:11px 0;border-bottom:1px solid var(--surf2)}
+.q:last-child{border-bottom:none}
+.q-txt{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.q-sub{font-size:11.5px;color:var(--inkt);margin-bottom:8px}
+.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.opt{border:1.5px solid var(--bdr);background:var(--surf);border-radius:8px;padding:9px 6px;text-align:center;font-size:11.5px;font-weight:600;color:var(--inks);line-height:1.25;transition:all .12s}
+.opt:hover{border-color:var(--bdrm)}
+.opt .on{display:block;font-size:14px;font-weight:800;margin-bottom:2px}
+.opt.s0.sel{border-color:#0F6E56;background:#E1F5EE;color:#085041}
+.opt.s1.sel{border-color:#BA7517;background:#FCEFCF;color:#7A5800}
+.opt.s2.sel{border-color:#C2622E;background:#FAD7C2;color:#7A3410}
+.opt.s3.sel{border-color:#A32D2D;background:#F7CBCB;color:#7A1515}
+@media(max-width:520px){.opts{grid-template-columns:repeat(2,1fr)}}
+
+/* Bristol / NRS / region / instrument rows reuse .opt look */
+.bristol-grid{display:grid;grid-template-columns:1fr;gap:6px}
+.bristol-opt{display:flex;gap:10px;align-items:center;border:1.5px solid var(--bdr);border-radius:8px;padding:9px 12px;background:var(--surf);text-align:left}
+.bristol-opt.sel{border-color:var(--g);background:var(--gp)}
+.bristol-n{width:24px;height:24px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+.nrs-row{display:flex;gap:4px;flex-wrap:wrap}
+.nrs-opt{flex:1;min-width:30px;border:1.5px solid var(--bdr);background:var(--surf);border-radius:7px;padding:9px 0;text-align:center;font-weight:700;font-size:13px;color:var(--inks)}
+.nrs-opt.sel{border-color:var(--re);background:#FCEBEB;color:var(--re)}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip-opt{border:1.5px solid var(--bdr);background:var(--surf);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--inks)}
+.chip-opt.sel{border-color:var(--g);background:var(--gp);color:var(--g)}
+
+/* Results */
+.hero{display:flex;align-items:center;gap:20px;background:var(--gf);border:1px solid var(--gl);border-radius:var(--r12);padding:18px;flex-wrap:wrap}
+.hero .big{font-size:42px;font-weight:800;line-height:.95;color:var(--g)}
+.hero .sub{font-size:11px;color:var(--inkt)}
+.bar-row{margin:7px 0}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar-track{height:8px;background:#F0EFEA;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+
+/* ── Clinician dashboard ─────────────────────────────────────────────────── */
+.clin-grid{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start}
+@media(max-width:860px){.clin-grid{grid-template-columns:1fr}}
+.left-col{display:flex;flex-direction:column;gap:12px}
+.sym-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cb{display:flex;align-items:flex-start;gap:6px;padding:5px 6px;border-radius:5px;font-size:12px;color:var(--inks);line-height:1.3}
+.cb:hover{background:var(--surf2)}
+.cb input{margin-top:2px;accent-color:var(--g);flex-shrink:0}
+.cb.active{background:var(--gp);color:#085041;font-weight:500}
+.tag-intake{display:inline-block;font-size:8.5px;font-weight:700;color:var(--g);background:var(--gp);border-radius:9px;padding:1px 6px;margin-left:4px;text-transform:uppercase;letter-spacing:.03em}
+.cond-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.cond{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bdr);border-radius:var(--r6);font-size:12px;color:var(--inks);line-height:1.2}
+.cond.on{border-width:1.5px;font-weight:600}
+.cond-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.grp-label{font-size:10px;font-weight:700;color:var(--inkt);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 4px}
+.slider-row{margin-bottom:7px}
+.slider-row .sh{display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px}
+.slider-row input{width:100%}
+.drivers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:680px){.drivers{grid-template-columns:repeat(2,1fr)}}
+.driver{border:1px solid var(--bdr);border-radius:9px;padding:8px;background:var(--surf2);text-align:center}
+.driver .dv{font-size:15px;font-weight:700}
+.driver .dl{font-size:9.5px;color:var(--inkt);margin-top:2px}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bdr);overflow-x:auto;margin-bottom:12px}
+.tab{padding:9px 13px;font-size:12.5px;font-weight:600;border:none;background:transparent;color:var(--inkt);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:var(--g);border-bottom-color:var(--g)}
+.tabpane{display:none}.tabpane.show{display:block}
+
+.pat-alert{border-radius:var(--r8);padding:11px 13px;margin-bottom:8px;border:1px solid;display:flex;gap:10px;align-items:flex-start}
+.pa-ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:#fff}
+.pa-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.pa-desc{font-size:12px;line-height:1.5}
+.pa-block{font-size:11.5px;margin-top:5px;line-height:1.45}
+.pa-block b{font-weight:700}
+
+.strain-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:700px){.strain-list{grid-template-columns:1fr}}
+.strain{border:1px solid var(--bdr);border-radius:var(--r8);overflow:hidden}
+.strain.top{border-color:var(--g);border-width:1.5px}
+.sc-head{padding:8px 10px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--bdr)}
+.sc-rank{width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sc-name{font-size:12px;font-weight:600;flex:1}
+.sc-ev{font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600}
+.sc-body{padding:8px 10px;background:var(--surf2);font-size:11.5px;color:var(--inks);line-height:1.45}
+.sc-body .india{color:var(--g);margin-top:3px}
+.sc-body .warn{color:var(--re);margin-top:3px;font-style:italic}
+
+.lab-cat{margin-bottom:12px}
+.lab-cat-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:6px 9px;border-radius:5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.lab-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:.5px solid var(--bdr)}
+.lab-row:last-child{border-bottom:none}
+.lr-name{font-size:12.5px;font-weight:600}
+.lr-desc{font-size:11px;color:var(--inkt);line-height:1.35}
+.lr-where{font-size:10.5px;color:var(--g);margin-top:2px}
+.lr-right{text-align:right;flex-shrink:0;min-width:78px}
+.lr-opt{font-size:11px;font-weight:600;color:var(--g)}
+.lr-cost{font-size:10.5px;color:var(--inkt)}
+.av{font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px}
+.av-yes{background:#E1F5EE;color:#085041}.av-maj{background:#E6F1FB;color:#042C53}
+.av-spec{background:#FAEEDA;color:#412402}.av-send{background:#EEEDFE;color:#26215C}.av-no{background:#FCEBEB;color:#501313}
+
+.gate-note{background:#FFF6E7;border:1px solid var(--am);border-radius:var(--r8);padding:9px 12px;font-size:11.5px;color:#5C4406;margin-bottom:12px;line-height:1.45}
+.gate-note b{color:var(--am)}
+
+/* ── Database ────────────────────────────────────────────────────────────── */
+.db-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.db-search{flex:1;min-width:180px;padding:9px 13px;border:1px solid var(--bdr);border-radius:var(--r8);font-size:14px;background:var(--surf)}
+.db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.pt-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r12);padding:14px;position:relative;transition:all .15s}
+.pt-card:hover{border-color:var(--gm);box-shadow:0 3px 14px rgba(15,110,86,.09)}
+.pt-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.pt-av{width:38px;height:38px;border-radius:50%;background:var(--gp);color:var(--g);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.pt-name{font-weight:700;font-size:15px}
+.pt-meta{font-size:11px;color:var(--inkt)}
+.pt-stats{display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--bdr)}
+.pt-stat .v{font-size:18px;font-weight:700}
+.pt-stat .l{font-size:9px;color:var(--inkt);text-transform:uppercase;letter-spacing:.05em}
+.pt-del{position:absolute;top:10px;right:10px;background:transparent;border:none;color:var(--bdrm);font-size:16px;padding:2px 6px;border-radius:5px}
+.pt-del:hover{background:#FCEBEB;color:#A32D2D}
+.db-empty{text-align:center;padding:50px 20px;color:var(--inkt)}
+
+.visit-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r12);padding:13px 15px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.visit-card.latest{border-color:var(--gm);border-width:1.5px}
+.visit-num{width:32px;height:32px;border-radius:50%;background:var(--gp);color:var(--g);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.visit-info{flex:1;min-width:120px}
+.visit-date{font-weight:700;font-size:13px}
+.visit-sub{font-size:11px;color:var(--inkt)}
+.visit-score{text-align:center}
+.visit-score .v{font-size:22px;font-weight:700;line-height:1}
+.visit-score .l{font-size:9px;color:var(--inkt);text-transform:uppercase}
+.delta-up{color:#A32D2D}.delta-down{color:#0F6E56}.delta-flat{color:#707070}
+.prog-svg{width:100%;overflow-x:auto}
+.back-btn{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r8);padding:8px 12px;font-size:12px;font-weight:600;color:var(--inks)}
+
+/* ── Save bar / toast / modal ────────────────────────────────────────────── */
+.save-bar{position:sticky;bottom:0;z-index:200;background:var(--surf);border-top:1px solid var(--bdr);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 -3px 14px rgba(0,0,0,.05);margin:14px -16px -16px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:all .3s;box-shadow:0 6px 24px rgba(0,0,0,.25);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.ov{position:fixed;inset:0;background:rgba(20,20,18,.46);z-index:10000;display:none;align-items:center;justify-content:center;padding:18px}
+.ov.show{display:flex}
+.dlg{background:var(--surf);border-radius:16px;width:100%;max-width:400px;box-shadow:0 18px 50px rgba(0,0,0,.3);overflow:hidden}
+.dlg-h{font-size:16px;font-weight:700;padding:18px 20px 4px}
+.dlg-m{font-size:13px;color:var(--inks);padding:0 20px 8px;line-height:1.5;white-space:pre-line}
+.dlg-b{padding:6px 20px}
+.dlg-b input,.dlg-b select{width:100%;padding:11px 13px;border:1.5px solid var(--bdr);border-radius:10px;font-size:16px;margin-bottom:10px}
+.dlg-acts{display:flex;gap:9px;padding:10px 20px 18px}
+.dlg-acts .btn{flex:1;padding:12px}
+
+/* ── Print report ────────────────────────────────────────────────────────── */
+#report{display:none}
+@media print{
+  body.printing .mode,body.printing .app-bar,body.printing .toast,body.printing .save-bar{display:none!important}
+  body.printing #report{display:block!important}
+}
+#report{font-size:10pt;color:#15140f;max-width:780px;margin:0 auto;padding:8px}
+#report .rh{display:flex;justify-content:space-between;border-bottom:2.5px solid #0F6E56;padding-bottom:10px;margin-bottom:16px}
+#report .rbrand{font-size:16pt;font-weight:800;color:#0F6E56}
+#report .rbrand small{display:block;font-size:8.5pt;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em}
+#report .rmeta{text-align:right;font-size:8.5pt;color:#555}
+#report h2{font-size:11pt;color:#0F6E56;border-bottom:1px solid #e0ddd6;padding-bottom:4px;margin:18px 0 8px}
+#report .rhero{display:flex;gap:18px;align-items:center;background:#F4FBF7;border:1px solid #cfeae0;border-radius:10px;padding:16px}
+#report .rhero .big{font-size:32pt;font-weight:800}
+#report table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-top:4px}
+#report th{background:#0F6E56;color:#fff;text-align:left;padding:5px 8px}
+#report td{padding:4px 8px;border-bottom:1px solid #eee}
+#report .rcard{border:1px solid #e0ddd6;border-left:3px solid #0F6E56;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}
+#report .rfoot{margin-top:20px;padding-top:10px;border-top:1px solid #e0ddd6;font-size:7.5pt;color:#888;line-height:1.5}
+</style>
+</head>
+<body>
+<header class="app-bar">
+  <div class="app-logo"><span class="dot"></span>Beyond Mechanics <span class="app-sub">Gut Suite</span></div>
+  <div class="app-spacer"></div>
+  <div class="mode-switch" id="modeSwitch">
+    <button class="mode-btn" data-mode="patient">Patient</button>
+    <button class="mode-btn" data-mode="clinician">Clinician</button>
+    <button class="mode-btn active" data-mode="database">Patients</button>
+  </div>
+  <div class="app-chip empty" id="activeChip" style="display:none"><span class="nm" id="activeName"></span><button class="x" id="activeClear">✕</button></div>
+</header>
+<main>
+  <section class="mode" id="mode-patient"></section>
+  <section class="mode" id="mode-clinician"></section>
+  <section class="mode show" id="mode-database"></section>
+</main>
+<div id="report"></div>
+<div class="toast" id="toast"></div>
+<div class="ov" id="overlay"><div class="dlg" id="dlg"></div></div>
+<script>
+
+const __modules = {}; const __cache = {};
+function __req(name){ if(__cache[name]) return __cache[name]; const e = __cache[name] = {}; __modules[name](e); return e; }
+
+__modules['app.js'] = function(__e){
+/* ============================================================================
+   app.js — controller. Owns the DB + active patient, switches modes, and gives
+   each UI surface a shared context (ctx). Save / export / merge-import flows and
+   the clinician handoff live here. Entry point loaded by index.html.
+   ========================================================================== */
+
+const { loadDB, saveDB, exportDB: serializeDB, mergeImport, recomputeVisit, uid } = __req('storage.js');
+const { SCHEMA_VERSION } = __req('schema.js');
+const { severityOf } = __req('scoring.js');
+const { $, $$, el, esc, toast, fmtDate, dialogForm, dialogConfirm } = __req('util.js');
+const Patient = __req('ui-patient.js');
+const Clinician = __req('ui-clinician.js');
+const Database = __req('ui-database.js');
+const { printReport } = __req('report.js');
+
+const App = {
+  db: loadDB(),
+  mode: 'database',
+  activeId: null,
+};
+
+// ── shared context handed to every UI module ───────────────────────────────
+const ctx = {
+  get db() { return App.db; },
+  uid,
+  persist() { saveDB(App.db); },
+  setMode,
+  activePatient: () => App.db.patients.find(p => p.id === App.activeId) || null,
+  setActive(id) { App.activeId = id; updateChip(); },
+  saveVisit,
+  openClinicianWithVisit,
+  printReport: (visit) => printReport(visit, ctx.activePatient()),
+  exportDB,
+  importDB,
+  refresh,
+};
+
+function setMode(name) {
+  App.mode = name;
+  $$('.mode').forEach(m => m.classList.remove('show'));
+  $('#mode-' + name).classList.add('show');
+  $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === name));
+  refresh();
+  window.scrollTo(0, 0);
+}
+
+function refresh() {
+  if (App.mode === 'patient') Patient.render();
+  else if (App.mode === 'clinician') Clinician.render();
+  else Database.render();
+}
+
+function updateChip() {
+  const chip = $('#activeChip'); const p = ctx.activePatient();
+  if (p) { chip.style.display = 'flex'; $('#activeName').textContent = p.name || 'Patient'; }
+  else chip.style.display = 'none';
+}
+
+// ── Save a visit snapshot to a patient record ──────────────────────────────
+async function saveVisit(snapshot) {
+  // Normalise: questionnaire-sourced visits recompute cleanly; manual clinician
+  // visits (no answers) keep their entered bands.
+  let visit = snapshot.answers
+    ? recomputeVisit(snapshot)
+    : { ...snapshot, id: uid(), schemaVersion: SCHEMA_VERSION, severity: severityOf(snapshot.total || 0).label };
+  if (!visit.id) visit.id = uid();
+
+  let patient = ctx.activePatient();
+  if (!patient) {
+    const r = await dialogForm('Save visit — which patient?', [
+      { key: 'name', label: 'Patient name (new or existing)', placeholder: 'Name' },
+      { key: 'ref', label: 'Reference / ID', placeholder: 'optional' },
+    ], { okLabel: 'Save visit' });
+    if (!r || !r.name) return;
+    patient = App.db.patients.find(p => (p.name || '').toLowerCase() === r.name.toLowerCase());
+    if (!patient) {
+      patient = { id: uid(), name: r.name, ref: r.ref || '', dob: '', sex: '', notes: '', created: Date.now(), visits: [] };
+      App.db.patients.push(patient);
+    }
+    App.activeId = patient.id;
+  } else {
+    if (!(await dialogConfirm(`Save this visit to ${patient.name}?`, { title: 'Save visit', okLabel: 'Save' }))) return;
+  }
+
+  patient.visits = patient.visits || [];
+  patient.visits.push(visit);
+  patient.visits.sort((a, b) => (a.date || 0) - (b.date || 0));
+  App.db.meta.visitsSinceExport = (App.db.meta.visitsSinceExport || 0) + 1;
+  ctx.persist();
+  updateChip();
+  toast(`Visit saved to ${patient.name}`);
+  Database.showList();
+  setMode('database');
+  maybeRemindExport();
+}
+
+function openClinicianWithVisit(visit) {
+  setMode('clinician');
+  Clinician.loadVisit(visit);
+}
+
+// ── Export (stamped) ────────────────────────────────────────────────────────
+async function exportDB() {
+  let label = App.db.meta.deviceLabel;
+  if (!label) {
+    const r = await dialogForm('Name this device', [{ key: 'label', label: 'Device label (e.g. "Prem-laptop")', placeholder: 'device' }], { okLabel: 'Export' });
+    if (!r) return;
+    label = r.label || 'device';
+    App.db.meta.deviceLabel = label; ctx.persist();
+  }
+  const json = serializeDB(App.db, label);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: `beyondmechanicsgutdb_${new Date().toISOString().slice(0, 10)}.json` });
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  App.db.meta.visitsSinceExport = 0; ctx.persist();
+  toast('Backup exported');
+}
+
+// ── Import (MERGE) ──────────────────────────────────────────────────────────
+function importDB() {
+  const input = el('input', { type: 'file', accept: 'application/json,.json', style: 'display:none' });
+  input.onchange = () => {
+    const file = input.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let result;
+      try { result = mergeImport(App.db, reader.result); }
+      catch (e) { toast('Import failed — not a valid backup file'); return; }
+      const ok = await dialogConfirm(
+        `Merge this backup?\n\n+ ${result.added.patients} new patient(s)\n+ ${result.added.visits} new visit(s)\n\nExisting visits are kept; nothing is overwritten.`,
+        { title: 'Import / merge', okLabel: 'Merge' });
+      if (!ok) return;
+      App.db = result.db; ctx.persist(); updateChip(); refresh();
+      toast(`Merged: +${result.added.patients} patients, +${result.added.visits} visits`);
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(input); input.click(); input.remove();
+}
+
+function maybeRemindExport() {
+  const every = App.db.meta.remindEvery || 5;
+  if ((App.db.meta.visitsSinceExport || 0) >= every) {
+    toast(`${App.db.meta.visitsSinceExport} visits since last backup — consider Export.`);
+  }
+}
+
+// ── boot ────────────────────────────────────────────────────────────────────
+function boot() {
+  Patient.init(ctx); Clinician.init(ctx); Database.init(ctx);
+  $('#modeSwitch').addEventListener('click', e => { const b = e.target.closest('.mode-btn'); if (b) setMode(b.dataset.mode); });
+  $('#activeClear').addEventListener('click', () => { App.activeId = null; updateChip(); if (App.mode === 'database') refresh(); });
+  ctx.persist(); // persist any migration that happened on load
+  setMode('database');
+}
+boot();
+
+
+return __e;
+};
+
+__modules['clinician-derive.js'] = function(__e){
+/* ============================================================================
+   clinician-derive.js — clinician taxonomy + intake→clinician auto-derivation.
+
+   In v7 the intake→clinician mapping lived in a standalone INTAKE_AUTO_MAP that
+   had to be hand-kept in step with the questions. Here the mapping lives ON each
+   question (schema.js `clinicianFlag`); this module just walks the schema. The
+   clinician checkbox lists (SYM_GROUPS / CONDITIONS / MEDS) are the vocabulary
+   those flags resolve into, and the clinician UI renders straight from them.
+
+   Symptom/medication ids are a SEPARATE namespace from question ids (question
+   ids are `section_concept`; sym/med ids are short tokens like `bloating`,
+   `ppi`, `constip`) — so there's no collision, unlike v7 where question key
+   `ppi` and med id `ppi` looked alike.
+   ========================================================================== */
+
+const { QUESTIONS, QID } = __req('schema.js');
+const { toAnswerArray } = __req('scoring.js');
+
+// ── Symptom groups (manual clinician input + auto-fill targets) ─────────────
+const SYM_GROUPS = [
+  { label: 'Digestive', color: '#0F6E56', syms: [
+    { id: 'bloating',    label: 'Bloating / gas after meals' },
+    { id: 'ibs_pain',    label: 'IBS-type cramping/pain' },
+    { id: 'constip',     label: 'Constipation dominant' },
+    { id: 'diarrhoea',   label: 'Diarrhoea dominant' },
+    { id: 'reflux',      label: 'Reflux / heartburn' },
+    { id: 'nausea',      label: 'Nausea / early satiety' },
+    { id: 'mucus_stool', label: 'Mucus in stool' },
+    { id: 'undigested',  label: 'Undigested food in stool' },
+    { id: 'post_infect', label: 'Symptoms began after gut infection' },
+  ] },
+  { label: 'Immune & Skin', color: '#A32D2D', syms: [
+    { id: 'freq_infect', label: 'Frequent infections 3+/yr' },
+    { id: 'food_sens',   label: 'Multiple food sensitivities' },
+    { id: 'allergy',     label: 'Seasonal allergies / atopy' },
+    { id: 'joint_pain',  label: 'Joint pain / stiffness' },
+    { id: 'eczema',      label: 'Eczema / urticaria / psoriasis' },
+    { id: 'acne_ros',    label: 'Acne / rosacea' },
+    { id: 'flushing',    label: 'Flushing / hives after eating' },
+    { id: 'wine_react',  label: 'Reaction to wine / fermented foods' },
+  ] },
+  { label: 'Brain-Gut & Mood', color: '#534AB7', syms: [
+    { id: 'brainfog',   label: 'Brain fog / poor focus' },
+    { id: 'anxiety',    label: 'Anxiety / restlessness' },
+    { id: 'low_mood',   label: 'Low mood / depression' },
+    // poor_sleep stays a recordable symptom but no longer feeds strain ranking
+    // (validated sleep score is the canonical signal — see strains.js).
+    { id: 'poor_sleep', label: 'Poor / non-restorative sleep' },
+    { id: 'fatigue',    label: 'Fatigue not relieved by rest' },
+    { id: 'headache',   label: 'Frequent headaches' },
+  ] },
+  { label: 'Metabolic', color: '#BA7517', syms: [
+    { id: 'weight_gain',  label: 'Unexplained weight gain' },
+    { id: 'sugar_crav',   label: 'Strong sugar / carb cravings' },
+    { id: 'glucose_swing',label: 'Blood sugar fluctuations' },
+    { id: 'thyroid_sym',  label: 'Thyroid symptoms (cold/fatigue/hair)' },
+    { id: 'fatty_liver',  label: 'Fatty liver / elevated GGT/ALT' },
+  ] },
+  { label: 'Candida indicators', color: '#993C1D', syms: [
+    { id: 'oral_thrush',  label: 'Oral thrush / white tongue' },
+    { id: 'vaginal_yeast',label: 'Recurrent vaginal yeast' },
+    { id: 'nail_fungal',  label: 'Brittle / discoloured nails' },
+    { id: 'itching',      label: 'Rectal / skin itching' },
+  ] },
+];
+
+// ── Condition / diagnosis flags ─────────────────────────────────────────────
+const CONDITIONS = [
+  { id: 'ibd',        label: "IBD (Crohn's / UC)",             color: '#A32D2D', bg: '#FCEBEB', pats: ['AUTOIMMUNE', 'LEAKY'] },
+  { id: 'coeliac',    label: 'Coeliac disease',                 color: '#A32D2D', bg: '#FCEBEB', pats: ['AUTOIMMUNE', 'LEAKY'] },
+  { id: 'hashimotos', label: "Hashimoto's thyroiditis",         color: '#0F6E56', bg: '#E1F5EE', pats: ['THYROID', 'AUTOIMMUNE'] },
+  { id: 'ra_lupus',   label: 'RA / Lupus / other AI',           color: '#A32D2D', bg: '#FCEBEB', pats: ['AUTOIMMUNE', 'LEAKY'] },
+  { id: 'nafld',      label: 'NAFLD / fatty liver',             color: '#BA7517', bg: '#FAEEDA', pats: ['METABOLIC'] },
+  { id: 't2dm_ir',    label: 'Type 2 DM / insulin resistance',  color: '#BA7517', bg: '#FAEEDA', pats: ['METABOLIC'] },
+  { id: 'pcos',       label: 'PCOS',                            color: '#BA7517', bg: '#FAEEDA', pats: ['METABOLIC', 'THYROID'] },
+  { id: 'fibromyalg', label: 'Fibromyalgia / chronic pain',     color: '#534AB7', bg: '#EEEDFE', pats: ['PSYCHO', 'LEAKY'] },
+  { id: 'sibo_dx',    label: 'SIBO previously diagnosed',       color: '#BA7517', bg: '#FAEEDA', pats: ['SIBO'] },
+  { id: 'candida_dx', label: 'Candida / fungal diagnosed',      color: '#993C1D', bg: '#FAECE7', pats: ['FUNGAL'] },
+  { id: 'autism_adhd',label: 'Autism / ADHD (paediatric)',      color: '#534AB7', bg: '#EEEDFE', pats: ['PSYCHO', 'LEAKY'] },
+  { id: 'eczema_dx',  label: 'Atopic eczema / asthma',          color: '#A32D2D', bg: '#FCEBEB', pats: ['AUTOIMMUNE', 'HISTAMINE'] },
+  { id: 'pibs_dx',    label: 'Post-infectious IBS diagnosed',   color: '#185FA5', bg: '#E6F1FB', pats: ['POST_INF'] },
+  { id: 'mcas_dx',    label: 'MCAS / histamine intolerance',    color: '#7A3B8A', bg: '#F5EEFF', pats: ['HISTAMINE'] },
+];
+
+// ── Medication / history flags — boost patterns + inform avoidances ─────────
+const MEDS = [
+  { id: 'abx_recent',   label: 'Antibiotics past 12 months',         color: '#BA7517', pats: ['SIBO', 'FUNGAL'],
+    note: 'Post-antibiotic: S. boulardii essential. Delay Lactobacillus-only probiotics 48h after antibiotic dose.' },
+  { id: 'abx_multiple', label: '3+ antibiotic courses (5 yrs)',       color: '#A32D2D', pats: ['SIBO', 'LEAKY', 'FUNGAL'],
+    note: 'Repeated courses: severe microbiome depletion likely. Consider GI-MAP. Higher dose/longer duration protocol needed.' },
+  { id: 'ppi',          label: 'PPI / antacid (long-term)',          color: '#BA7517', pats: ['SIBO'],
+    note: 'PPI use: achlorhydria promotes SIBO. If ongoing, SIBO breath test mandatory before probiotic protocol.' },
+  { id: 'nsaids',       label: 'NSAIDs (regular)',                    color: '#185FA5', pats: ['LEAKY'],
+    note: 'NSAIDs: primary cause of leaky gut. Prioritise barrier repair. Zinc carnosine + PGE2 pathway support.' },
+  { id: 'steroids',     label: 'Steroids / immunosuppressants',      color: '#A32D2D', pats: ['FUNGAL', 'AUTOIMMUNE'],
+    note: 'Steroids: Candida overgrowth risk elevated. Screen for fungal pattern. Avoid fermented foods acutely.' },
+  { id: 'antidepress',  label: 'Antidepressants / SSRIs',            color: '#534AB7', pats: ['PSYCHO'],
+    note: 'SSRIs: note serotonin pathway. ⚠ Do NOT co-prescribe 5-HTP (serotonin syndrome risk). Psychobiotic combination (L. helveticus R0052) may allow dose review at 6 months with prescribing doctor.' },
+  { id: 'hpylori_tx',   label: 'H. pylori treatment (past)',         color: '#0F6E56', pats: ['SIBO', 'LEAKY'],
+    note: 'Post-H. pylori eradication: microbiome significantly disrupted. L. reuteri DSM 17938 + S. boulardii are priority strains.' },
+  { id: 'csection',     label: 'C-section birth (patient / child)',  color: '#185FA5', pats: ['LEAKY'],
+    note: 'C-section birth: early microbiome seeding deficit. Higher risk of atopy, allergy, dysbiosis — document in HX.' },
+  { id: 'food_poison',  label: "Past food poisoning / traveller's D", color: '#BA7517', pats: ['SIBO', 'LEAKY'],
+    note: 'Post-infectious IBS is a recognised entity. SIBO very common sequela. Screen if ongoing symptoms 3+ months post-infection.' },
+];
+
+/* Derive clinician syms/meds (and which were auto-derived) from a questionnaire
+   visit's raw answers + extras, by reading each question's schema clinicianFlag.
+   Bowel direction comes from Bristol (more reliable than the generic "irregular
+   bowel" item). Returns {syms:Set, meds:Set, fromIntake:Set}.                  */
+function deriveClinicianFlags(rawAnswers, extrasObj) {
+  const syms = new Set(), meds = new Set(), fromIntake = new Set();
+  if (Array.isArray(rawAnswers) || (rawAnswers && typeof rawAnswers === 'object')) {
+    const a = toAnswerArray(rawAnswers);
+    for (const q of QUESTIONS) {
+      const flag = q.clinicianFlag;
+      if (!flag) continue;
+      const val = a[QID[q.id]];
+      if (val != null && val >= flag.min) {
+        (flag.syms || []).forEach(s => { syms.add(s); fromIntake.add(s); });
+        (flag.meds || []).forEach(m => { meds.add(m); fromIntake.add(m); });
+      }
+    }
+  }
+  if (extrasObj && extrasObj.bristol != null) {
+    if (extrasObj.bristol <= 2) { syms.add('constip'); fromIntake.add('constip'); }
+    else if (extrasObj.bristol >= 6) { syms.add('diarrhoea'); fromIntake.add('diarrhoea'); }
+  }
+  return { syms, meds, fromIntake };
+}
+
+__e.SYM_GROUPS = SYM_GROUPS; __e.CONDITIONS = CONDITIONS; __e.MEDS = MEDS; __e.deriveClinicianFlags = deriveClinicianFlags;
+return __e;
+};
+
+__modules['labs.js'] = function(__e){
+/* ============================================================================
+   labs.js — India lab guide (LAB_TESTS). Ported verbatim from v7.
+
+   This is the authoritative test guide; pattern test-lists in patterns.js are
+   written to agree with it (brief §8.2 — serum zonulin already noted here as
+   cross-reacting / fecal-preferred, and LEAKY's list now leads with fecal).
+
+   Preserved deliberately (brief §8.6): the "Removed — not available in India"
+   category with sensible proxies (LPS/LBP → hsCRP), and GI-MAP gated as a
+   ₹30–46k escalation-tier test rather than a first-line ask.
+
+   avail codes: yes=widely available · maj=major cities · spec=specialist lab ·
+   send=send abroad · no=not available. priority: first/routine/immune/escalate/removed.
+   `always:true` = order regardless of pattern.
+   ========================================================================== */
+
+const LAB_TESTS = [
+  { category: 'Stool tests', priority: 'first', color: '#534AB7', bg: '#EEEDFE', tests: [
+    { name: 'Fecal calprotectin', desc: 'IBD vs IBS differentiation · intestinal inflammation', opt: '<50 µg/g', avail: 'yes', where: 'Metropolis / SRL / Vijaya / Apollo. Home collection.', cost: '₹2,500–5,500', patterns: ['LEAKY', 'AUTOIMMUNE'], always: true },
+    { name: 'H. pylori stool antigen', desc: 'Active H. pylori · more accurate than serology post-treatment', opt: 'Negative', avail: 'yes', where: 'All major chains. Preferred over H. pylori IgG blood test.', cost: '₹600–1,500', patterns: ['SIBO'], always: false },
+    { name: 'Stool R/E + culture + sensitivity', desc: 'Pathogen screen · parasites · O&P', opt: 'No pathogens', avail: 'yes', where: 'All chains.', cost: '₹400–1,500', patterns: ['SIBO', 'FUNGAL'], always: false },
+    { name: 'Fecal sIgA', desc: 'Mucosal immune competence', opt: 'Lab range', avail: 'spec', where: 'SRL reference labs · Neuberg Diagnostics. Call ahead to confirm.', cost: '₹2,500–4,500', patterns: ['LEAKY', 'THYROID'], always: false },
+    { name: 'Fecal zonulin', desc: 'Intestinal permeability — more tissue-specific than serum', opt: 'Lab range', avail: 'send', where: 'iThrive Healing & Beyond → Diagnostic Solutions USA (FedEx, Hyderabad pickup). Also available as standalone (₹14,299).', cost: '₹6,000–15,000', patterns: ['LEAKY', 'AUTOIMMUNE'], always: false },
+    { name: 'GI-MAP (full qPCR panel)', desc: 'Comprehensive microbiome + pathogens + sIgA + zonulin + Akkermansia. Gold standard.', opt: 'No pathogens', avail: 'send', where: 'iThrive Healing & Beyond (+91 89565 35768). FedEx pickup Hyderabad. Allow 2–3 weeks.', cost: '₹30,000–46,000', patterns: ['SIBO', 'FUNGAL', 'LEAKY', 'AUTOIMMUNE', 'METABOLIC'], always: false },
+    { name: 'Pancreatic elastase (fecal)', desc: 'Exocrine pancreatic insufficiency — underdiagnosed dysbiosis driver', opt: '>200 µg/g', avail: 'maj', where: 'Metropolis reference labs · Neuberg. Call to confirm.', cost: '₹3,500–6,000', patterns: ['SIBO'], always: false },
+  ] },
+  { category: 'Blood — baseline (always order)', priority: 'routine', color: '#0F6E56', bg: '#E1F5EE', tests: [
+    { name: 'hsCRP', desc: 'Low-grade systemic inflammation · metabolic endotoxaemia proxy', opt: '<1 mg/L', avail: 'yes', where: 'Vijaya Diagnostics Hyderabad. All chains.', cost: '₹300–600', patterns: [], always: true },
+    { name: 'CBC with differential', desc: 'Anaemia, eosinophilia, lymphopenia — dysbiosis downstream effects', opt: 'Normal differential', avail: 'yes', where: 'All chains. Thyrocare ₹100–150.', cost: '₹150–400', patterns: [], always: true },
+    { name: 'Fasting insulin + glucose → HOMA-IR', desc: 'Metabolic dysbiosis · insulin resistance', opt: 'Insulin <10 µIU/mL · HOMA-IR <1.5', avail: 'yes', where: 'Vijaya / Sprint Diagnostics Hyderabad / Dr Lal. HOMA-IR calculated from the two values.', cost: '₹600–1,200', patterns: ['METABOLIC'], always: false },
+    { name: 'HbA1c + lipid profile', desc: 'Metabolic context · gut-liver axis', opt: 'HbA1c <5.4% · LDL/TG patterns', avail: 'yes', where: 'All chains.', cost: '₹500–1,000', patterns: ['METABOLIC'], always: false },
+    { name: 'Vitamin D (25-OH)', desc: 'Immune-gut axis · dysbiosis reduces D3 conversion', opt: '60–80 ng/mL', avail: 'yes', where: 'Thyrocare ₹250–400. Vijaya / Dr Lal.', cost: '₹300–700', patterns: [], always: true },
+    { name: 'B12 + folate', desc: 'SIBO competes for B12 · malabsorption marker', opt: 'B12 >500 pg/mL', avail: 'yes', where: 'All chains.', cost: '₹500–1,000', patterns: ['SIBO'], always: false },
+    { name: 'Ferritin + iron studies', desc: 'Gut absorption marker · leaky gut inflammatory iron loss', opt: 'Ferritin >50 µg/L', avail: 'yes', where: 'All chains.', cost: '₹500–1,200', patterns: [], always: true },
+    { name: 'Magnesium + zinc', desc: 'Tight junction integrity · frequent malabsorption markers', opt: 'Both mid-normal', avail: 'yes', where: 'Metropolis / SRL / Vijaya.', cost: '₹600–1,500', patterns: ['LEAKY'], always: false },
+    { name: 'Liver panel (ALT · AST · GGT · ALP)', desc: 'Gut-liver axis · NAFLD · GGT correlates with dysbiosis', opt: 'GGT <30 · ALT <30 U/L', avail: 'yes', where: 'All chains. Order "LFT."', cost: '₹400–800', patterns: ['METABOLIC'], always: false },
+  ] },
+  { category: 'Blood — immune & autoimmune', priority: 'immune', color: '#A32D2D', bg: '#FCEBEB', tests: [
+    { name: 'Anti-gliadin IgG + IgA (DGP)', desc: 'NCGS / coeliac screen · zonulin trigger · leaky gut driver', opt: 'Negative', avail: 'yes', where: 'Metropolis (DGP IgG ₹1,975). Order alongside tTG IgA.', cost: '₹2,000–4,000', patterns: ['LEAKY', 'THYROID', 'AUTOIMMUNE'], always: false },
+    { name: 'tTG IgA + total serum IgA', desc: 'Coeliac screen · always pair with total IgA to detect IgA deficiency', opt: 'tTG IgA negative', avail: 'yes', where: 'Metropolis (₹1,650). Vijaya / Dr Lal.', cost: '₹1,500–3,000', patterns: ['AUTOIMMUNE', 'LEAKY'], always: false },
+    { name: 'Serum zonulin', desc: 'Intestinal permeability proxy (cross-reacts with complement — fecal preferred)', opt: '<20 ng/mL', avail: 'spec', where: 'Neuberg Diagnostics Hyderabad (call to confirm). SRL reference labs.', cost: '₹3,000–6,000', patterns: ['LEAKY', 'AUTOIMMUNE'], always: false },
+    { name: 'Full thyroid panel (TSH + fT3 + fT4 + anti-TPO + anti-TG)', desc: "Gut-thyroid axis · Hashimoto's autoimmunity", opt: 'TSH 0.5–2.0 mIU/L · anti-TPO <35', avail: 'yes', where: 'Vijaya Diagnostics Hyderabad ₹650–1,800. Thyrocare. Dr Lal.', cost: '₹650–2,000', patterns: ['THYROID', 'AUTOIMMUNE'], always: false },
+    { name: 'ANA by IFA (antinuclear antibody)', desc: 'Autoimmune screening — if elevated, triggers specific antibody panel', opt: 'Negative or low titre', avail: 'yes', where: 'Vijaya / Metropolis / SRL. Order IFA method, not ELISA screen.', cost: '₹700–1,500', patterns: ['AUTOIMMUNE'], always: false },
+    { name: 'Morning serum cortisol (8–9am)', desc: 'HPA axis stress response — gut dysregulation marker', opt: 'Normal morning range', avail: 'yes', where: 'Vijaya / all chains. Collect 8–9am fasting.', cost: '₹500–1,000', patterns: ['PSYCHO'], always: false },
+  ] },
+  { category: 'Breath & functional', priority: 'escalate', color: '#185FA5', bg: '#E6F1FB', tests: [
+    { name: 'SIBO hydrogen breath test — glucose', desc: 'Proximal SIBO detection · fewer false positives than lactulose', opt: 'H2 rise <12 ppm in 2 hrs', avail: 'maj', where: 'AIG Hospitals Hyderabad · Cygnus Gastro Hyderabad · Manipal Hospitals. Metropolis (H2 only).', cost: '₹1,500–4,000', patterns: ['SIBO'], always: false },
+    { name: 'H2+CH4 breath test — lactulose', desc: 'Full SIBO + IMO · confirm CH4 channel before booking', opt: 'H2 <20 ppm · CH4 <10 ppm', avail: 'maj', where: 'AIG Hospitals Hyderabad (confirm CH4 available) · major GI centres.', cost: '₹2,000–5,000', patterns: ['SIBO', 'IMO'], always: false },
+    { name: 'Salivary cortisol (CAR — 4 point)', desc: 'HPA axis dysregulation · psychobiotic protocol decision', opt: 'Normal awakening curve', avail: 'spec', where: 'Neuberg Diagnostics. Only if serum cortisol abnormal or psychobiotic pattern confirmed.', cost: '₹3,000–6,000', patterns: ['PSYCHO'], always: false },
+    { name: 'Urine OAT — full functional (Mosaic/iThrive)', desc: 'D-arabinitol (Candida) · indican · neurotransmitter metabolites · oxalates', opt: 'Low organics', avail: 'send', where: 'iThrive Healing & Beyond or functional medicine practitioner account. FedEx to USA. Allow 3–4 wks.', cost: '₹12,000–20,000', patterns: ['FUNGAL', 'PSYCHO'], always: false },
+  ] },
+  { category: 'Removed — not available in India', priority: 'removed', color: '#707070', bg: '#F5F3EE', tests: [
+    { name: 'LPS / LBP (serum endotoxin)', desc: 'Not available at any Indian clinical lab. Use hsCRP >1 mg/L as proxy for metabolic endotoxaemia.', opt: 'Removed', avail: 'no', where: 'Use hsCRP as clinical proxy.', cost: '—', patterns: [], always: false, removed: true },
+    { name: 'H2S breath test', desc: 'Not available in India. Suspect clinically: diarrhoea-dominant + negative H2/CH4 + strong SIBO picture.', opt: 'Removed', avail: 'no', where: 'Manage empirically.', cost: '—', patterns: [], always: false, removed: true },
+    { name: 'Fecal SCFAs standalone', desc: 'Only accessible within GI-MAP or CDSA send-out. Not available as standalone test in India.', opt: 'Removed', avail: 'no', where: 'Included in GI-MAP send-out only.', cost: '—', patterns: [], always: false, removed: true },
+  ] },
+];
+
+const AVAIL_LABELS = {
+  yes:  { cls: 'av-yes',  label: 'Widely available' },
+  maj:  { cls: 'av-maj',  label: 'Major cities' },
+  spec: { cls: 'av-spec', label: 'Specialist lab' },
+  send: { cls: 'av-send', label: 'Send abroad' },
+  no:   { cls: 'av-no',   label: 'Not available' },
+};
+
+// Labs relevant to a set of fired patterns (always-order tests + pattern matches),
+// excluding the "removed" reference category. Used by dashboard + report alike.
+function relevantLabs(patternIds) {
+  const fired = Array.from(patternIds || []);
+  const out = [];
+  for (const cat of LAB_TESTS) {
+    if (cat.priority === 'removed') continue;
+    const tests = cat.tests.filter(t => t.always || t.patterns.some(p => fired.includes(p)));
+    if (tests.length) out.push({ ...cat, tests });
+  }
+  return out;
+}
+
+__e.LAB_TESTS = LAB_TESTS; __e.AVAIL_LABELS = AVAIL_LABELS; __e.relevantLabs = relevantLabs;
+return __e;
+};
+
+__modules['patterns.js'] = function(__e){
+/* ============================================================================
+   patterns.js — ONE pattern set. Each entry carries both its detector and its
+   clinician content (tests / avoid / strains / protocol). The patient screen
+   reads `patientDesc`; the clinician dashboard and the printed report read the
+   rest — all from this single array, so they can never disagree (v7 kept two
+   parallel PATTERNS arrays; this collapses them).
+
+   Detectors are PURE: detect(secScores, answers, extras) → boolean, addressing
+   questions through QID — never a hardcoded position.
+
+   Clinical content ported in substance from v7, with the rebuild brief §8.3
+   corrections applied inline and marked  [§8.3]:
+     - LEAKY tests: lead with fecal zonulin (tissue-specific); serum demoted
+       with its cross-reactivity caveat, matching labs.js.
+     - THYROID avoid: iodine caution retargeted to excess/supplemental iodine,
+       with an explicit pregnancy/lactation exception (needs rise, not fall).
+     - PSYCHO protocol: 5-HTP + SSRI/SNRI serotonin-syndrome contraindication
+       added (mirrors the Berberine+metformin flag already under METABOLIC).
+     - Evidence-tier hedges added to the more speculative items (5-HTP as MMC
+       prokinetic, NAC biofilm, Atrantil for IMO).
+
+   Audience (brief §8.4): this content is for physician co-management / review
+   before anything reaches a patient. Rx items are retained and labelled Rx.
+   ========================================================================== */
+
+const { QID } = __req('schema.js');
+const { toAnswerArray } = __req('scoring.js');
+
+const PATTERNS = [
+  { id: 'SIBO', label: 'SIBO pattern', emoji: '💨', color: '#BA7517', bg: '#FAEEDA', border: '#EF9F27',
+    patientDesc: 'Your bloating pattern and history suggest possible small intestine bacterial overgrowth.',
+    desc: 'Bloating 1–2 hrs post-meal, antibiotic/PPI history, and GI-dominant score — hydrogen/mixed SIBO suggested.',
+    detect: (sc, q) => sc.GI >= 15 && q[QID.gi_bloating] >= 2 && (q[QID.hx_abx_5yr] >= 1 || q[QID.hx_food_poison] >= 1),
+    tests: ['Hydrogen breath test — glucose substrate · AIG Hospitals or Cygnus Gastro Hyderabad', 'Lactulose H2+CH4 breath test (if CH4/IMO suspected)', 'B12 + folate (SIBO competes for B12)', 'H. pylori stool antigen (rule out concurrent H. pylori)'],
+    avoid: 'Avoid Lactobacillus-only probiotics during active SIBO eradication phase. Introduce spore-formers (BCO, BCL) post-eradication. Reduce fermentable carbohydrates (low-FODMAP) during treatment.',
+    strains: ['BCO', 'BCL', 'SBO', 'LRE'],
+    protocol: 'Pharmaceutical: Rifaximin 550mg TID × 14 days (first-line H2-SIBO, Rx). Herbal alternative (no Rifaximin access): Berberine 500mg TID + Oregano oil 200mg TID × 4 weeks. Restore phase: B. coagulans MTCC 5856 (BCO) + S. boulardii. Prokinetics post-treatment: 5-HTP 50mg PM [§8.3 emerging evidence as MMC prokinetic — contraindicated with SSRI/SNRI, see PSYCHO] or ginger extract. Retest breath 4 wks after eradication.' },
+
+  { id: 'IMO', label: 'Methane-SIBO / IMO', emoji: '🔄', color: '#3B6D11', bg: '#EAF3DE', border: '#639922',
+    patientDesc: 'Constipation with bloating suggests methanogen overgrowth in the intestine.',
+    desc: 'Constipation-dominant pattern — methanogen overgrowth (Methanobrevibacter smithii).',
+    detect: (sc, q) => q[QID.gi_irregular_bowel] >= 2 && sc.GI >= 12 && q[QID.gi_bloating] >= 2,
+    tests: ['H2+CH4 breath test — confirm CH4 channel · AIG Hospitals Hyderabad (confirm CH4 available before booking)', 'Fecal calprotectin to rule out structural cause'],
+    avoid: 'Rifaximin alone is inadequate for IMO — methanogens require a different antibiotic target. Standard H2-SIBO herbal protocols are also less effective without the Allicin + Atrantil combination.',
+    strains: ['BCO'],
+    protocol: 'PHARMACEUTICAL (CH4 confirmed): Rifaximin 550mg TID + Neomycin 500mg BD × 14 days (combination required — Neomycin targets Methanobrevibacter). Rx — requires gastroenterology co-management. HERBAL ALTERNATIVE: Allicin (garlic extract) 450mg TID + Atrantil (peppermint + quebracho) 2 caps TID × 4 wks [§8.3 emerging evidence for IMO]. CONSTIPATION SUPPORT: Magnesium citrate 400–600mg nocte as osmotic agent. Prokinetics essential post-eradication: 5-HTP 50mg PM [§8.3 emerging; contraindicated with SSRI/SNRI]. B. coagulans (BCO) restore phase.' },
+
+  { id: 'LEAKY', label: 'Leaky gut / high permeability', emoji: '🔓', color: '#185FA5', bg: '#E6F1FB', border: '#378ADD',
+    patientDesc: 'Immune reactivity combined with gut symptoms suggests elevated intestinal permeability.',
+    desc: 'Immune + GI combination with food reactivity — elevated intestinal permeability likely.',
+    detect: (sc, q) => sc.IM >= 10 && sc.GI >= 10 && q[QID.im_food_sens] >= 2,
+    // [§8.3] fecal zonulin first (tissue-specific); serum demoted with caveat, matching labs.js.
+    tests: ['Fecal zonulin (preferred — tissue-specific) · iThrive → Diagnostic Solutions USA (send-out)', 'Serum zonulin only if fecal unavailable — cross-reacts with complement, less specific · Neuberg Hyderabad', 'Fecal calprotectin · Metropolis / Vijaya', 'Anti-gliadin IgG/IgA (DGP) · Metropolis (₹2,000–4,000)', 'hsCRP (proxy for endotoxaemia) · Vijaya Diagnostics'],
+    avoid: 'Repair barrier FIRST before high-dose probiotic loading (4 weeks). No aggressive fermented food challenge acutely. Identify and remove root cause (NSAIDs, gluten, stress) before starting protocol.',
+    strains: ['LPL', 'BIN', 'LGG', 'NCF'],
+    protocol: 'Sequence matters: WEEK 1–4: L-Glutamine 5g BD + Zinc carnosine 75mg BD + Tributyrin 600mg BD (barrier repair). WEEK 5+: Introduce L. plantarum 299v as anchor probiotic. WEEK 8+: Add B. infantis 35624 if visceral pain present. Allow 8–12 wks minimum before assessing response.' },
+
+  { id: 'FUNGAL', label: 'Candida / fungal pattern', emoji: '🔬', color: '#993C1D', bg: '#FAECE7', border: '#D85A30',
+    patientDesc: 'Sugar cravings plus skin/mucous membrane symptoms suggest possible Candida overgrowth.',
+    desc: 'Sugar cravings + mucous membrane symptoms — Candida overgrowth suspected.',
+    detect: (sc, q) => q[QID.hx_ppi] >= 2 && (q[QID.sk_oral_thrush] >= 1 || q[QID.sk_vaginal_yeast] >= 1 || q[QID.sk_nails] >= 1),
+    tests: ['Urine OAT (D-arabinitol) — send to USA via iThrive · ₹12,000–20,000 (Tier 4 escalation)', 'Stool R/E + culture — look for Candida species', 'Treat empirically based on clinical pattern at Tier 2–3'],
+    avoid: 'Anti-Candida diet: no refined sugar, no yeast-containing foods (bread, beer, vinegar), no fermented dairy, limit fruit to 1–2 low-sugar servings/day. Avoid standard Lactobacillus probiotics during antifungal phase — reintroduce after 4–6 weeks. Avoid L. casei and L. bulgaricus (histamine-producing species).',
+    strains: ['SBO', 'NCF', 'LGG'],
+    protocol: 'ANTIFUNGAL PHASE (4 wks): S. boulardii CNCM I-745 5B CFU BD + Caprylic acid 1–2g with meals + Oregano oil 200mg (carvacrol standardised) + NAC 600mg BD [§8.3 biofilm-disruption rationale is emerging, not established]. RESTORE PHASE (wks 5+): L. acidophilus NCFM® + L. rhamnosus GG for competitive exclusion recolonisation. Rotate antifungal herbs every 4 weeks.' },
+
+  { id: 'PSYCHO', label: 'Psychobiotic priority', emoji: '🧠', color: '#534AB7', bg: '#EEEDFE', border: '#7F77DD',
+    patientDesc: 'Your brain-gut axis is the dominant domain — mood, anxiety, or sleep are the lead symptoms.',
+    desc: 'Brain-gut axis dominant — mood/anxiety/sleep scores exceed GI burden.',
+    // Dominant-domain branch keeps its scaled threshold; the validated PSS-4 /
+    // sleep branch uses a lower BG floor so a clearly elevated validated score
+    // isn't blocked by the dominant-domain gate (replaces the old single sleep item).
+    detect: (sc, q, ex) =>
+      (sc.BG >= 8 && sc.BG > sc.GI * 0.7) ||
+      (sc.BG >= 4 && ((ex && ex.pss4Score != null && ex.pss4Score >= 10) || (ex && ex.sleepScore != null && ex.sleepScore >= 7))),
+    tests: ['Morning serum cortisol (8–9am fasting) · Vijaya Diagnostics', 'Salivary cortisol (CAR) · Neuberg Diagnostics if serum abnormal', 'CBC + B12 + folate to rule out haematological mood drivers'],
+    avoid: 'No specific probiotic avoidances — add psychobiotics alongside standard protocol. Never replace prescribed psychiatric medications.',
+    strains: ['LHE', 'LRE'],
+    // [§8.3] 5-HTP + SSRI/SNRI serotonin-syndrome contraindication added.
+    protocol: "L. helveticus R0052 + B. longum R0175 (Probio'Stick) 1 sachet bedtime in cool water. 4–6 weeks minimum before judging response. Magnesium glycinate 300–400mg PM. Ashwagandha KSM-66 300mg BD if cortisol dysregulation confirmed. 5-HTP 50–100mg PM as serotonin pathway support — ⚠ CONTRAINDICATED with SSRIs/SNRIs (serotonin syndrome risk); do not co-prescribe without prescribing doctor's review. Vagal nerve adjuncts: humming 5 min/day, diaphragmatic breathing, cold water face immersion — evidence-based, free, recommend to patient." },
+
+  { id: 'THYROID', label: 'Gut-thyroid axis', emoji: '⚡', color: '#0F6E56', bg: '#E1F5EE', border: '#5DCAA5',
+    patientDesc: 'Thyroid symptoms with immune and metabolic involvement suggest a gut-thyroid axis pattern.',
+    desc: "Thyroid symptoms + immune + metabolic elevation — Hashimoto's / gut-thyroid axis dysfunction.",
+    detect: (sc, q) => q[QID.me_thyroid_sym] >= 1 && sc.IM >= 8 && sc.ME >= 6,
+    tests: ['TSH + free T3 + free T4 + anti-TPO + anti-TG · Vijaya Diagnostics (₹650–1,800)', 'Anti-gliadin IgG/IgA (DGP) + tTG IgA · Metropolis (₹3,500–5,000 combined)', 'hsCRP · Vijaya'],
+    // [§8.3] iodine caution retargeted to excess/supplemental, pregnancy/lactation exception added.
+    avoid: 'Gluten-free trial strongly indicated regardless of coeliac status — 3-month minimum. Dairy elimination also recommended. IODINE: avoid EXCESS / SUPPLEMENTAL iodine (high-dose supplements, kelp/seaweed) in active Hashimoto\'s — iodine excess can drive TPO antibody production. This does NOT mean avoiding iodised table salt at normal dietary levels (India\'s iodisation programme prevents deficiency goitre). EXCEPTION: iodine requirements RISE in pregnancy and lactation — do not restrict; manage with the treating physician.',
+    strains: ['BLG', 'LGG'],
+    protocol: "FIRST INTERVENTION: Gluten-free + dairy-free 3-month trial before adding supplements. Myo-inositol 2g BD (reduces anti-TPO antibodies — multiple RCTs, strongest nutraceutical for Hashimoto's). Selenium 100–200µg/day. B. longum BB536 + L. rhamnosus GG. Vitamin D3 target 60–80 ng/mL. Recheck anti-TPO at 6 months." },
+
+  { id: 'METABOLIC', label: 'Metabolic dysbiosis', emoji: '📈', color: '#BA7517', bg: '#FAEEDA', border: '#EF9F27',
+    patientDesc: 'Weight and metabolic markers suggest a gut-driven insulin resistance pattern.',
+    desc: 'Weight gain + metabolic pattern — Akkermansia depletion + insulin resistance likely.',
+    detect: (sc, q) => sc.ME >= 12 && q[QID.me_sugar_crav] >= 2 && q[QID.me_cholesterol] >= 1,
+    tests: ['Fasting insulin + fasting glucose → calculate HOMA-IR · Vijaya / Sprint Diagnostics Hyderabad', 'HbA1c + lipid profile · Vijaya (₹600–1,200)', 'Liver panel (GGT, ALT, AST) · Vijaya'],
+    avoid: 'Avoid high-fructose diet and ultra-processed carbohydrates. Avoid generic Indian "Akkermansia" blends — Akkermansia cannot survive standard capsule manufacturing; only pasteurised Pendulum product has evidence. DRUG INTERACTION: Berberine + metformin = additive hypoglycaemic effect — reduce Berberine dose or monitor glucose closely in T2DM patients on metformin.',
+    strains: ['AKK', 'LGA', 'LPL'],
+    protocol: 'Akkermansia muciniphila pasteurised (Pendulum) 100M AFU — fasted, 30 min before food. Berberine 500mg TID with meals (caution: metformin interaction). L. gasseri SBT2055 10–20B CFU for visceral fat reduction (12–24 weeks for effect). Polyphenol prebiotics for Akkermansia substrate: Pomegranate extract + Cranberry + Green tea catechins daily. Target HOMA-IR <1.5 as outcome marker.' },
+
+  { id: 'AUTOIMMUNE', label: 'Autoimmune gut link', emoji: '🛡️', color: '#A32D2D', bg: '#FCEBEB', border: '#E24B4A',
+    patientDesc: 'Your autoimmune history combined with immune burden suggests gut permeability may be a factor.',
+    desc: 'Autoimmune diagnosis + high immune burden — gut permeability driving immune activation.',
+    detect: (sc, q) => q[QID.im_autoimmune] >= 1 && sc.IM >= 14,
+    tests: ['Fecal calprotectin · Metropolis / Vijaya (₹2,500–5,500)', 'tTG IgA + anti-gliadin DGP · Metropolis (₹3,500–5,000)', 'ANA by IFA · Vijaya / Metropolis', 'hsCRP · Vijaya'],
+    avoid: 'Gluten-free and nightshade elimination for 8-week structured trial, then reintroduce one at a time. Dairy elimination strongly recommended. Vitamin D3 target 60–80 ng/mL is especially critical — standard lab range is insufficient for autoimmune management.',
+    strains: ['BIN', 'LGG', 'BLG', 'VSL'],
+    protocol: 'B. infantis 35624 1B CFU/day. L. rhamnosus GG 10–20B CFU. B. longum BB536 (cytokine modulation, NK cell support). VSL#3 if IBD-level inflammation confirmed (Rx). Curcumin 500mg BD + Omega-3 2–3g/day. Vitamin D3 target 60–80 ng/mL. 6-month minimum commitment — recheck autoimmune markers at 6 months.' },
+
+  { id: 'POST_INF', label: 'Post-infectious IBS (PI-IBS)', emoji: '🦠', color: '#185FA5', bg: '#E6F1FB', border: '#378ADD',
+    patientDesc: 'Your gut symptoms appear to have begun or worsened significantly after a past gut infection — post-infectious IBS is a distinct pattern your clinician should assess.',
+    desc: 'Ongoing gut symptoms 3+ months after acute gastroenteritis, food poisoning, or traveller\'s diarrhoea — post-infectious IBS is a distinct clinical entity, not residual infection.',
+    detect: (sc, q) => q[QID.hx_post_infect] >= 2 || (q[QID.hx_food_poison] >= 2 && (sc.GI >= 8 || q[QID.gi_abd_pain] >= 2)),
+    tests: ['Fecal calprotectin · Metropolis / Vijaya — rule out ongoing inflammation vs functional PI-IBS', 'H. pylori stool antigen — rule out concurrent H. pylori', 'Stool R/E + culture — rule out unresolved infection or parasites', 'hsCRP — if elevated, inflammatory component still active'],
+    avoid: 'Do not treat as active infection — antibiotics inappropriate if cultures are negative. Avoid aggressive probiotic loading before ruling out ongoing mucosal inflammation (calprotectin first).',
+    strains: ['LGG', 'BIN', 'SBO'],
+    protocol: 'MECHANISM: Mast cell activation, visceral hypersensitivity, and gut motility disruption persist after pathogen clearance. PROTOCOL: L. rhamnosus GG 10B CFU BD + B. infantis 35624 1B CFU/day — specifically effective in PI-IBS visceral pain. S. boulardii for ongoing bowel irregularity. Low-FODMAP diet for 6–8 weeks if diarrhoea-dominant. Peppermint oil enteric-coated 187mg TID for spasm and visceral pain (India-available). Re-assess calprotectin at 8 weeks.' },
+
+  { id: 'HISTAMINE', label: 'Histamine intolerance / MCAS', emoji: '🌡️', color: '#7A3B8A', bg: '#F5EEFF', border: '#B57DD4',
+    patientDesc: 'Your reactions to fermented foods or wine, combined with allergy and skin symptoms, suggest possible histamine intolerance or mast cell sensitivity.',
+    desc: 'Flushing, hives, headache after fermented foods or wine, itching post-eating, nasal congestion — histamine burden exceeds DAO enzyme capacity, often secondary to dysbiosis.',
+    detect: (sc, q) => q[QID.im_histamine] >= 2 && (q[QID.im_allergies] >= 2 || q[QID.im_skin_issues] >= 2),
+    tests: ['Urine OAT (D-arabinitol + indican markers) · iThrive send-abroad — secondary investigation if clinical picture strong', 'Fecal calprotectin — rule out IBD as mast cell driver', 'Serum tryptase if MCAS suspected (specialist)'],
+    avoid: 'CRITICAL STRAIN AVOIDANCE: Avoid L. casei, L. bulgaricus, L. delbrueckii — these are histamine-producing species that will worsen symptoms. Avoid fermented foods (kimchi, kefir, aged cheese, cured meats, wine, vinegar) during treatment phase. High-oxalate foods may also drive MCAS in susceptible patients.',
+    strains: ['LGG', 'BIN', 'SBO'],
+    protocol: 'LOW-HISTAMINE PROBIOTICS: L. rhamnosus GG + B. infantis 35624 — both are histamine-neutral or histamine-degrading strains. S. boulardii for gut barrier repair. HISTAMINE DEGRADATION SUPPORT: DAO enzyme supplement (porcine-derived, with meals — India import via iHerb). MAST CELL STABILISERS: Quercetin 500mg BD + Vitamin C 1–2g/day (natural antihistamine and mast cell stabilisation). Ligilactobacillus salivarius LS01 (import) — specifically produces histamine deaminase (histamine-degrading enzyme, rare among probiotics). Low-histamine diet 4–8 weeks with systematic reintroduction.' },
+];
+
+const PATTERN_BY_ID = Object.freeze(
+  PATTERNS.reduce((m, p) => { m[p.id] = p; return m; }, {})
+);
+function patternById(id) { return PATTERN_BY_ID[id]; }
+
+/* Detect fired patterns. `answers` may be a positional array or an id-map;
+   `extras` carries the derived {pss4Score, sleepScore, bristol, ...}. Returns
+   fired pattern objects in canonical order. */
+function detectPatterns(secScores, answers, extras = {}) {
+  const q = toAnswerArray(answers);
+  return PATTERNS.filter(p => {
+    try { return p.detect(secScores, q, extras); }
+    catch { return false; }
+  });
+}
+
+__e.PATTERNS = PATTERNS; __e.patternById = patternById; __e.detectPatterns = detectPatterns;
+return __e;
+};
+
+__modules['report.js'] = function(__e){
+/* ============================================================================
+   report.js — export-only print/PDF report, generated from a canonical visit
+   snapshot (same record the dashboard uses). The patient-facing report stays
+   plain-language and omits Rx specifics; the strain table comes from the ONE
+   shared ranker, so it can never disagree with the on-screen list (brief §8.1).
+   ========================================================================== */
+
+const { SECTIONS, sectionMax } = __req('schema.js');
+const { severityOf, indexPct } = __req('scoring.js');
+const { patternById } = __req('patterns.js');
+const { rankStrains } = __req('strains.js');
+const { deriveClinicianFlags } = __req('clinician-derive.js');
+const { esc, fmtDate } = __req('util.js');
+
+function printReport(visit, patient) {
+  const total = visit.total || 0;
+  const sv = severityOf(total);
+  const secScores = visit.secScores || SECTIONS.reduce((o, s) => { o[s.id] = 0; return o; }, {});
+  const patterns = (visit.patterns || []).map(patternById).filter(Boolean);
+
+  // Use the visit's clinician flags if present (saved from the dashboard);
+  // otherwise derive them from intake exactly as the dashboard does, so the
+  // report's ranker inputs match the on-screen list (keeps brief §8.1 closed).
+  let syms = visit.syms, meds = visit.meds;
+  if ((!syms || !meds) && visit.answers) {
+    const d = deriveClinicianFlags(visit.answers, visit.extras);
+    syms = syms || [...d.syms]; meds = meds || [...d.meds];
+  }
+  const ranked = rankStrains({
+    patternIds: visit.patterns || [],
+    bands: visit.bands || SECTIONS.reduce((o, s) => { o[s.id] = 0; return o; }, {}),
+    syms: syms || [], meds: meds || [], conds: visit.conds || [],
+    extras: visit.extras || null,
+  }).filter(s => s.score > 0).slice(0, 6);
+
+  const name = (patient && patient.name) || 'Patient';
+  const now = fmtDate(Date.now());
+
+  const domainRows = SECTIONS.map(s => {
+    const sc = secScores[s.id] ?? 0; const max = sectionMax(s.id); const p = Math.round(sc / max * 100);
+    return `<div style="display:grid;grid-template-columns:150px 1fr 60px;gap:8px;align-items:center;padding:3px 0;font-size:9pt">
+      <span>${esc(s.full)}</span>
+      <span style="height:12px;background:#f0efea;border-radius:4px;overflow:hidden;display:block"><span style="display:block;height:100%;width:${p}%;background:${s.color}"></span></span>
+      <span style="text-align:right">${sc}/${max}</span></div>`;
+  }).join('');
+
+  const patternCards = patterns.length ? patterns.map(p => `
+    <div class="rcard">
+      <h4 style="color:${p.color};font-size:9.5pt;margin-bottom:3px">${p.emoji} ${esc(p.label)}</h4>
+      <div style="font-size:8.5pt;color:#333;line-height:1.5">${esc(p.desc)}</div>
+      <div style="font-size:8pt;color:#185FA5;margin-top:4px"><b>Suggested tests:</b> ${p.tests.map(esc).join(' · ')}</div>
+    </div>`).join('') : '<div style="font-size:9pt;color:#777">No specific patterns flagged at this visit.</div>';
+
+  const strainRows = ranked.length ? ranked.map((s, i) => `
+    <tr><td>${i + 1}</td><td><b>${esc(s.name)}</b><br><span style="color:#666">${esc(s.indication)}</span></td>
+    <td>${esc(s.cfu)}</td><td>${esc(s.india)}</td></tr>`).join('') : '';
+
+  document.getElementById('report').innerHTML = `
+    <div class="rh">
+      <div class="rbrand">Beyond Mechanics<small>Gut Health Suite</small></div>
+      <div class="rmeta"><b>${esc(name)}</b><br>${now}<br>Code: ${esc(visit.code || '')}</div>
+    </div>
+    <div class="rhero">
+      <div><div class="big" style="color:${sv.color}">${indexPct(total)}%</div>
+      <div style="font-size:8pt;color:#666">Dysbiosis Index · raw ${total}/120</div></div>
+      <div style="flex:1"><span class="pill ${sv.cls}" style="font-size:11pt">${esc(sv.label)}</span>
+      <div style="font-size:9pt;color:#3a3a37;margin-top:6px;line-height:1.5">${esc(sv.desc)}</div></div>
+    </div>
+    <h2>Domain breakdown</h2>${domainRows}
+    <h2>Patterns to review with your clinician</h2>${patternCards}
+    ${strainRows ? `<h2>Strain shortlist</h2><table><tr><th>#</th><th>Strain &amp; indication</th><th>Dose</th><th>India availability</th></tr>${strainRows}</table>` : ''}
+    <div class="rfoot">
+      Educational screening tool — not a diagnosis. The Dysbiosis Index <i>suggests</i> patterns of gut imbalance; it is not a lab-grade measurement.
+      Strain, dosing and testing details are for review by a qualified clinician before use. Prescription-only medicines require a prescribing doctor.
+    </div>`;
+
+  document.body.classList.add('printing');
+  const cleanup = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', cleanup); };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(() => window.print(), 60);
+}
+
+__e.printReport = printReport;
+return __e;
+};
+
+__modules['scales.js'] = function(__e){
+/* ============================================================================
+   scales.js — answer-option vocabularies for the 0–3 symptom questions, plus
+   the separate validated-instrument definitions (PSS-4, sleep-4, Bristol,
+   NRS pain). Pure data + pure scoring helpers. No DOM, no globals.
+
+   Ported verbatim in substance from BM_Gut_Suite_v7. Every 0–3 scale is an
+   array of exactly four labels (options 0,1,2,3). A question with no `scale`
+   uses DEFAULT_SCALE (severity).
+   ========================================================================== */
+
+// ── 0–3 SCALE VOCABULARIES ──────────────────────────────────────────────────
+const SCALES = {
+  DEFAULT:       ['Never / Absent', 'Mild / Occasional', 'Moderate / Frequent', 'Severe / Always'],
+  FREQ:          ['Never / Rarely', 'Occasionally', 'Often / Most weeks', 'Very often / Daily'],
+  RECUR:         ['Never', 'Once or twice ever', 'Recurring (3+ times)', 'Current / Persistent'],
+  COUNT_INFECT:  ['Rarely / Never', '1–2 times per year', '3–4 times per year', '5+ times per year'],
+  COUNT_FOOD_S:  ['None', '1 food', '2–3 foods', '4 or more foods'],
+  COUNT_ABX_12:  ['None in past year', '1 course', '2 courses', '3 or more courses'],
+  COUNT_ABX_5Y:  ['None in past 5 years', '1–2 courses', '3–5 courses', '6+ or long courses'],
+  STATUS:        ['No / Not tested', 'Possible / Suspected', 'Yes – mild / past', 'Yes – confirmed / active'],
+  STATUS_DIAG:   ['No', 'Suspected, not confirmed', 'Diagnosed – currently stable', 'Diagnosed – currently active'],
+  PPI:           ['Never used', 'Occasionally (as needed)', 'Past regular use', 'Current regular use (3+ months)'],
+  FOOD_POISON:   ['Never happened', 'Happened – fully resolved', 'Happened – some symptoms remain', 'Happened – ongoing symptoms'],
+  DIET:          ['Mostly whole foods, high fibre', 'Mix of whole and processed', 'Mostly processed, low fibre', 'Almost entirely processed / very low fibre'],
+  CSEC:          ['Neither', 'Formula-fed as infant only', 'C-section only', 'Both C-section and formula-fed'],
+  HISTAMINE:     ['Never / No reaction', 'Mild — occasional minor reaction', 'Moderate — noticeable reaction several times', 'Severe — consistent strong reaction'],
+  POST_INFECT:   ['No — my symptoms started another way', 'Possibly — timing feels related', 'Likely — gut changed noticeably after that infection', 'Yes — gut has never been the same since that episode'],
+};
+
+// Resolve a question's scale name (or undefined) to its 4-label array.
+function scaleFor(name) {
+  return SCALES[name] || SCALES.DEFAULT;
+}
+
+// ── BRISTOL STOOL FORM SCALE (Lewis & Heaton 1997) — types 1–7 ──────────────
+const BRISTOL_TYPES = [
+  { n: 1, label: 'Separate hard lumps',     sub: 'like nuts, hard to pass',        tag: 'Constipated',          col: '#7A4A1E' },
+  { n: 2, label: 'Lumpy and sausage-like',  sub: 'sausage-shaped but lumpy',       tag: 'Slightly constipated', col: '#9A6B2E' },
+  { n: 3, label: 'Sausage with cracks',     sub: 'sausage with surface cracks',    tag: 'Near normal',          col: '#3B6D11' },
+  { n: 4, label: 'Smooth, soft sausage',    sub: 'like a smooth soft snake — ideal', tag: 'Normal / ideal',     col: '#0F6E56' },
+  { n: 5, label: 'Soft blobs, clear edges', sub: 'soft blobs that pass easily',    tag: 'Lacking fibre',        col: '#BA7517' },
+  { n: 6, label: 'Mushy, ragged edges',     sub: 'fluffy pieces, mushy stool',     tag: 'Mild diarrhoea',       col: '#C2622E' },
+  { n: 7, label: 'Watery, no solid pieces', sub: 'entirely liquid',                tag: 'Diarrhoea',            col: '#A32D2D' },
+];
+
+// ── GI-VALIDATED MODIFIED 4-ITEM PERCEIVED STRESS SCALE ─────────────────────
+// Du et al. 2023, BMC Gastroenterol, CC BY 4.0. Items reworded; standard PSS
+// 0–4 frequency anchors. Higher = more stress. Items 2 & 3 (indices 1,2) are
+// positively framed and therefore reverse-scored.
+const PSS4_ITEMS = [
+  'In the last month, how often have you felt unable to control the important things in your life?',
+  'In the last month, how often have you felt confident about your ability to handle your personal problems?',
+  'In the last month, how often have you felt that things were going your way?',
+  'In the last month, how often have you felt difficulties were piling up so high you could not overcome them?',
+];
+const PSS4_REVERSED = [false, true, true, false];
+const PSS4_ANCHORS = ['Never', 'Almost never', 'Sometimes', 'Fairly often', 'Very often']; // 0–4
+
+// PSS-4 total 0–16. Returns null until all four items answered.
+function pss4Score(arr) {
+  if (!arr || arr.some(v => v == null)) return null;
+  return arr.reduce((sum, v, i) => sum + (PSS4_REVERSED[i] ? (4 - v) : v), 0);
+}
+function pss4Band(s) {
+  if (s == null) return null;
+  return s <= 5 ? { l: 'Low', c: '#0F6E56' } : s <= 9 ? { l: 'Moderate', c: '#BA7517' } : { l: 'High', c: '#A32D2D' };
+}
+
+// ── SHORT SLEEP-QUALITY CHECK (open items; 0–3 each) ────────────────────────
+// Higher = poorer sleep. This is the ONE canonical sleep signal in the rebuild
+// (the legacy single-item BG sleep question and the clinician `poor_sleep`
+// checkbox-as-scorer are both retired — see schema.js / strains.js notes).
+const SLEEP_ITEMS = [
+  { t: 'How long does it usually take you to fall asleep?', a: ['Under 15 min', '15–30 min', '30–60 min', 'Over 60 min'] },
+  { t: 'How often do you wake during the night?',           a: ['Rarely', 'Once a night', '2–3 times', '4+ times / frequently'] },
+  { t: 'How rested do you feel on waking?',                 a: ['Fully refreshed', 'Mostly rested', 'Somewhat tired', 'Exhausted / unrefreshed'] },
+  { t: 'On average, how many hours of actual sleep do you get?', a: ['7–9 hours', '6–7 hours', '5–6 hours', 'Under 5 hours'] },
+];
+
+// Sleep total 0–12. Returns null until all four items answered.
+function sleepScore(arr) {
+  if (!arr || arr.some(v => v == null)) return null;
+  return arr.reduce((a, b) => a + b, 0);
+}
+function sleepBand(s) {
+  if (s == null) return null;
+  return s <= 3 ? { l: 'Good', c: '#0F6E56' } : s <= 6 ? { l: 'Fair', c: '#BA7517' } : { l: 'Poor', c: '#A32D2D' };
+}
+
+// ── NRS PAIN — standard 0–10 Numeric Rating Scale + body region ─────────────
+// Manual-therapy context: location matters. Purely observational — does NOT
+// feed the Dysbiosis Index, pattern detection, or strain ranking by design.
+const PAIN_REGIONS = [
+  { id: 'low_back', label: 'Low back' },
+  { id: 'neck',     label: 'Neck' },
+  { id: 'joints',   label: 'Joints' },
+  { id: 'abdomen',  label: 'Abdomen' },
+  { id: 'other',    label: 'Other' },
+];
+function painBand(s) {
+  if (s == null) return null;
+  return s === 0 ? { l: 'None', c: '#0F6E56' }
+    : s <= 3 ? { l: 'Mild', c: '#3B6D11' }
+    : s <= 6 ? { l: 'Moderate', c: '#BA7517' }
+    : { l: 'Severe', c: '#A32D2D' };
+}
+
+__e.SCALES = SCALES; __e.BRISTOL_TYPES = BRISTOL_TYPES; __e.PSS4_ITEMS = PSS4_ITEMS; __e.PSS4_REVERSED = PSS4_REVERSED; __e.PSS4_ANCHORS = PSS4_ANCHORS; __e.SLEEP_ITEMS = SLEEP_ITEMS; __e.PAIN_REGIONS = PAIN_REGIONS; __e.scaleFor = scaleFor; __e.pss4Score = pss4Score; __e.pss4Band = pss4Band; __e.sleepScore = sleepScore; __e.sleepBand = sleepBand; __e.painBand = painBand;
+return __e;
+};
+
+__modules['schema.js'] = function(__e){
+/* ============================================================================
+   schema.js — THE single source of truth for the Beyond Mechanics Gut Suite.
+
+   In v7 the same questions lived in THREE hand-synced places: a keyed patient
+   array, a plain-string clinician array, and a bridging INTAKE_AUTO_MAP. This
+   file fuses all three. Every question carries everything all surfaces need:
+
+     - patientText / patientSub : how the patient sees it (graded 0–3)
+     - clinicianLabel           : the clinician dashboard label (was array #2)
+     - scale                    : 0–3 option vocabulary (see scales.js)
+     - clinicianFlag            : intake→clinician auto-derivation (was the map)
+
+   Rules enforced here:
+     - IDs are `section_concept`, globally unique, APPEND-ONLY. Never reused,
+       never reordered for meaning. Adding/removing a question can never shift
+       another's index because every consumer addresses questions BY ID.
+     - The flat index (QID: id→position) is COMPUTED ONCE, the only index in
+       the app. No hardcoded q[14] / q[28] positions anywhere.
+     - Section `max` is COMPUTED (questions × 3), never hand-declared, so it
+       can never silently drift from the question list (v7 needed a console
+       tripwire for exactly this; here it's impossible by construction).
+
+   Retired vs v7 (deliberate, per rebuild brief §3/§4):
+     - Legacy single-item "poor sleep" (BG) and "high chronic stress" (HX)
+       questions stay removed — sleep/stress are the validated PSS-4 + sleep-4
+       instruments (scales.js), the one canonical signal per construct.
+
+   Clinical wording ported in substance unchanged from BM_Gut_Suite_v7.
+   ========================================================================== */
+
+const SCHEMA_VERSION = 3; // generation tag stamped on every saved record
+
+// ── SECTIONS (order + presentation; max is computed below) ──────────────────
+const SECTIONS = [
+  { id: 'GI', label: 'GI', full: 'Gastrointestinal',       color: '#0F6E56', bg: '#E1F5EE' },
+  { id: 'IM', label: 'IM', full: 'Immune & Inflammatory',  color: '#A32D2D', bg: '#FCEBEB' },
+  { id: 'BG', label: 'BG', full: 'Brain-Gut & Mood',       color: '#534AB7', bg: '#EEEDFE' },
+  { id: 'ME', label: 'ME', full: 'Metabolic',              color: '#BA7517', bg: '#FAEEDA' },
+  { id: 'HX', label: 'HX', full: 'History & Risk Factors', color: '#185FA5', bg: '#E6F1FB' },
+  { id: 'SK', label: 'SK', full: 'Skin & External Signs',  color: '#993C1D', bg: '#FAECE7' },
+];
+
+// ── THE 40 QUESTIONS — flat, in canonical order ─────────────────────────────
+// clinicianFlag: when a loaded questionnaire answer is >= min, the listed
+// clinician symptom (syms) / medication (meds) checkboxes auto-tick, tagged
+// "from intake", fully overridable. Questions with no clinicianFlag simply
+// don't auto-derive a checkbox.
+const QUESTIONS = [
+  // ── GI ──
+  { id: 'gi_bloating', section: 'GI',
+    patientText: 'Bloating or abdominal distension after meals',
+    patientSub:  'Feeling of fullness, pressure, or swelling after eating',
+    clinicianLabel: 'Bloating or abdominal distension after meals',
+    clinicianFlag: { min: 2, syms: ['bloating'] } },
+  { id: 'gi_gas', section: 'GI',
+    patientText: 'Excessive gas or belching',
+    patientSub:  'Frequent flatulence, especially after meals',
+    clinicianLabel: 'Excessive gas or belching',
+    clinicianFlag: { min: 2, syms: ['bloating'] } },
+  { id: 'gi_irregular_bowel', section: 'GI', scale: 'FREQ',
+    patientText: 'Irregular bowel habits',
+    patientSub:  'Alternating constipation and diarrhoea, or persistently abnormal',
+    clinicianLabel: 'Irregular bowel habits (alternating constipation/diarrhoea)' },
+  { id: 'gi_abd_pain', section: 'GI',
+    patientText: 'Abdominal pain or cramping',
+    patientSub:  'Intermittent or chronic lower/mid abdominal discomfort',
+    clinicianLabel: 'Abdominal pain or cramping',
+    clinicianFlag: { min: 2, syms: ['ibs_pain'] } },
+  { id: 'gi_reflux', section: 'GI',
+    patientText: 'Heartburn or acid reflux',
+    patientSub:  'Burning sensation, regurgitation, or sour taste',
+    clinicianLabel: 'Heartburn or acid reflux',
+    clinicianFlag: { min: 2, syms: ['reflux'] } },
+  { id: 'gi_undigested', section: 'GI', scale: 'FREQ',
+    patientText: 'Undigested food in stool',
+    patientSub:  'Visible food particles, greasy or floating stools',
+    clinicianLabel: 'Undigested food in stool',
+    clinicianFlag: { min: 2, syms: ['undigested'] } },
+  { id: 'gi_nausea', section: 'GI',
+    patientText: 'Nausea or early satiety',
+    patientSub:  'Feeling sick or full after small amounts of food',
+    clinicianLabel: 'Nausea or early satiety',
+    clinicianFlag: { min: 2, syms: ['nausea'] } },
+  { id: 'gi_mucus_stool', section: 'GI', scale: 'FREQ',
+    patientText: 'Mucus in stool',
+    patientSub:  'Visible mucus or stringy material in bowel movements',
+    clinicianLabel: 'Mucus in stool',
+    clinicianFlag: { min: 2, syms: ['mucus_stool'] } },
+  { id: 'gi_urgency', section: 'GI',
+    patientText: 'Urgency to use the bathroom',
+    patientSub:  'Sudden urgent need to defecate with little warning',
+    clinicianLabel: 'Urgency to use the bathroom' },
+  { id: 'gi_bad_breath', section: 'GI',
+    patientText: 'Persistent bad breath despite good oral hygiene',
+    patientSub:  'Halitosis that seems to come from the gut, not the mouth',
+    clinicianLabel: 'Persistent bad breath despite good oral hygiene' },
+
+  // ── IM ──
+  { id: 'im_histamine', section: 'IM', scale: 'HISTAMINE',
+    patientText: 'Do you experience flushing, hives, itching, or headache after eating fermented foods, aged cheese, wine, or vinegar?',
+    patientSub:  'Reactions that suggest histamine intolerance or mast cell sensitivity',
+    clinicianLabel: 'Flushing, hives, or headache after fermented foods / wine / vinegar',
+    clinicianFlag: { min: 2, syms: ['flushing', 'wine_react'] } },
+  { id: 'im_infections', section: 'IM', scale: 'COUNT_INFECT',
+    patientText: 'How often do you get infections (colds, UTIs, skin infections)?',
+    patientSub:  'Think about the past 12 months',
+    clinicianLabel: 'Infection frequency (colds, UTIs, skin) — past 12 months',
+    clinicianFlag: { min: 2, syms: ['freq_infect'] } },
+  { id: 'im_autoimmune', section: 'IM', scale: 'STATUS_DIAG',
+    patientText: 'Autoimmune condition diagnosed',
+    patientSub:  "e.g. Hashimoto's, RA, lupus, psoriasis, coeliac disease",
+    clinicianLabel: "Autoimmune condition diagnosed (Hashimoto's, RA, lupus, coeliac, etc.)" },
+  { id: 'im_allergies', section: 'IM',
+    patientText: 'Seasonal allergies or hay fever',
+    patientSub:  'Histamine reactivity, runny nose, itchy eyes, sneezing',
+    clinicianLabel: 'Seasonal allergies or hay fever',
+    clinicianFlag: { min: 2, syms: ['allergy'] } },
+  { id: 'im_food_sens', section: 'IM', scale: 'COUNT_FOOD_S',
+    patientText: 'How many foods trigger a reaction (bloating, rash, headache)?',
+    patientSub:  'Food sensitivities or intolerances',
+    clinicianLabel: 'Number of foods that trigger a reaction (sensitivities/intolerances)',
+    clinicianFlag: { min: 2, syms: ['food_sens'] } },
+  { id: 'im_joint_pain', section: 'IM',
+    patientText: 'Joint pain or stiffness',
+    patientSub:  'Inflammatory joint pain without a clear structural cause',
+    clinicianLabel: 'Joint pain or stiffness without clear structural cause',
+    clinicianFlag: { min: 2, syms: ['joint_pain'] } },
+  { id: 'im_skin_issues', section: 'IM',
+    patientText: 'Skin issues — eczema, urticaria, or rosacea',
+    patientSub:  'Inflammatory skin conditions that flare unpredictably',
+    clinicianLabel: 'Skin issues — eczema, urticaria, or rosacea',
+    clinicianFlag: { min: 2, syms: ['eczema', 'acne_ros'] } },
+  { id: 'im_crp', section: 'IM', scale: 'STATUS',
+    patientText: 'Blood markers of inflammation (CRP/ESR) raised on blood work',
+    patientSub:  'Has your doctor told you your inflammation markers are elevated?',
+    clinicianLabel: 'Raised blood inflammation markers (CRP/ESR) on blood work' },
+
+  // ── BG ──
+  { id: 'bg_brainfog', section: 'BG',
+    patientText: 'Brain fog or poor concentration',
+    patientSub:  'Difficulty thinking clearly, word-finding problems, mental fatigue',
+    clinicianLabel: 'Brain fog or poor concentration',
+    clinicianFlag: { min: 2, syms: ['brainfog'] } },
+  { id: 'bg_anxiety', section: 'BG',
+    patientText: 'Persistent anxiety or nervousness',
+    patientSub:  'Generalised or gut-linked anxiety, restlessness, racing thoughts',
+    clinicianLabel: 'Persistent anxiety or nervousness',
+    clinicianFlag: { min: 2, syms: ['anxiety'] } },
+  { id: 'bg_low_mood', section: 'BG',
+    patientText: 'Depressed mood or low motivation',
+    patientSub:  'Persistent low mood, loss of interest in things you normally enjoy',
+    clinicianLabel: 'Depressed mood or low motivation',
+    clinicianFlag: { min: 2, syms: ['low_mood'] } },
+  { id: 'bg_fatigue', section: 'BG',
+    patientText: 'Fatigue not improved by rest',
+    patientSub:  'Chronic tiredness, energy crashes especially after meals',
+    clinicianLabel: 'Fatigue not improved by rest',
+    clinicianFlag: { min: 2, syms: ['fatigue'] } },
+  { id: 'bg_headache', section: 'BG', scale: 'FREQ',
+    patientText: 'How often do you get headaches or migraines?',
+    patientSub:  'Particularly after eating or in the morning',
+    clinicianLabel: 'Frequency of headaches or migraines',
+    clinicianFlag: { min: 2, syms: ['headache'] } },
+
+  // ── ME ──
+  { id: 'me_weight_gain', section: 'ME',
+    patientText: 'Unexplained weight gain or difficulty losing weight',
+    patientSub:  'Despite reasonable diet and exercise habits',
+    clinicianLabel: 'Unexplained weight gain or difficulty losing weight',
+    clinicianFlag: { min: 2, syms: ['weight_gain'] } },
+  { id: 'me_sugar_crav', section: 'ME',
+    patientText: 'Blood sugar fluctuations or carbohydrate / sugar cravings',
+    patientSub:  'Energy crashes, strong cravings for carbs or sweets',
+    clinicianLabel: 'Blood sugar fluctuations or carbohydrate/sugar cravings',
+    clinicianFlag: { min: 2, syms: ['sugar_crav', 'glucose_swing'] } },
+  { id: 'me_nutrients', section: 'ME', scale: 'STATUS',
+    patientText: 'Nutrient deficiencies found on blood work',
+    patientSub:  'B12, iron, Vitamin D, magnesium — low levels despite adequate diet',
+    clinicianLabel: 'Nutrient deficiencies (B12, iron, Vitamin D, magnesium) on blood work' },
+  { id: 'me_cholesterol', section: 'ME', scale: 'STATUS',
+    patientText: 'Elevated cholesterol or triglycerides',
+    patientSub:  'Has your doctor said your cholesterol or lipid levels are abnormal?',
+    clinicianLabel: 'Elevated cholesterol or triglycerides' },
+  { id: 'me_thyroid_sym', section: 'ME',
+    patientText: 'Thyroid symptoms',
+    patientSub:  'Feeling cold, fatigue, hair loss, constipation, weight gain without clear cause',
+    clinicianLabel: 'Thyroid symptoms (cold intolerance, fatigue, hair loss)',
+    clinicianFlag: { min: 1, syms: ['thyroid_sym'] } },
+  { id: 'me_fatty_liver', section: 'ME', scale: 'STATUS',
+    patientText: 'Fatty liver or elevated liver enzymes (ALT / GGT)',
+    patientSub:  'NAFLD diagnosis or raised liver markers on blood work',
+    clinicianLabel: 'History of fatty liver or elevated liver enzymes (ALT/GGT)',
+    clinicianFlag: { min: 1, syms: ['fatty_liver'] } },
+
+  // ── HX ──
+  { id: 'hx_abx_12mo', section: 'HX', scale: 'COUNT_ABX_12',
+    patientText: 'How many antibiotic courses have you taken in the past 12 months?',
+    patientSub:  'Include any course, even a short one',
+    clinicianLabel: 'Antibiotic use in the past 12 months',
+    clinicianFlag: { min: 1, meds: ['abx_recent'] } },
+  { id: 'hx_abx_5yr', section: 'HX', scale: 'COUNT_ABX_5Y',
+    patientText: 'How many antibiotic courses have you taken in the past 5 years?',
+    patientSub:  'Include prolonged courses (10+ days) in your count',
+    clinicianLabel: 'Multiple or prolonged antibiotic courses (3+ in 5 years)',
+    clinicianFlag: { min: 2, meds: ['abx_multiple'] } },
+  { id: 'hx_ppi', section: 'HX', scale: 'PPI',
+    patientText: 'Use of PPIs or antacids (omeprazole, pantoprazole, ranitidine…)',
+    patientSub:  'How regularly do you or have you taken acid-reducing medication?',
+    clinicianLabel: 'Regular use of PPIs or antacids (omeprazole, pantoprazole, etc.)',
+    clinicianFlag: { min: 2, meds: ['ppi'] } },
+  { id: 'hx_food_poison', section: 'HX', scale: 'FOOD_POISON',
+    patientText: "History of food poisoning or traveller's diarrhoea",
+    patientSub:  'Did gut symptoms persist or start after a past infection?',
+    clinicianLabel: "History of food poisoning or traveller's diarrhoea",
+    clinicianFlag: { min: 1, meds: ['food_poison'] } },
+  { id: 'hx_post_infect', section: 'HX', scale: 'POST_INFECT',
+    patientText: 'Did your gut symptoms begin or significantly worsen after a bout of food poisoning, gastroenteritis, or traveller\'s diarrhoea?',
+    patientSub:  'This is separate from the episode itself — asking whether that event triggered lasting gut changes',
+    clinicianLabel: 'Did gut symptoms begin or worsen after a gut infection?',
+    clinicianFlag: { min: 2, meds: ['food_poison'] } },
+  { id: 'hx_diet', section: 'HX', scale: 'DIET',
+    patientText: 'Diet quality — how much of your diet is processed or low-fibre?',
+    patientSub:  'Less than 5 portions of fruit/vegetables daily; frequent packaged foods',
+    clinicianLabel: 'Low-fibre or high processed food diet' },
+  { id: 'hx_csec', section: 'HX', scale: 'CSEC',
+    patientText: 'C-section birth or formula-fed as infant',
+    patientSub:  'Applies to you personally, or if answering on behalf of a child',
+    clinicianLabel: 'C-section birth or formula-fed as infant',
+    clinicianFlag: { min: 2, meds: ['csection'] } },
+
+  // ── SK ──
+  { id: 'sk_oral_thrush', section: 'SK', scale: 'RECUR',
+    patientText: 'Oral thrush or unusual tongue appearance',
+    patientSub:  'White patches, burning sensation, geographic tongue — how often?',
+    clinicianLabel: 'Oral thrush or unusual tongue appearance',
+    clinicianFlag: { min: 1, syms: ['oral_thrush'] } },
+  { id: 'sk_vaginal_yeast', section: 'SK', scale: 'RECUR',
+    patientText: 'Vaginal / rectal itching or recurrent yeast infections',
+    patientSub:  'Candida-related symptoms — how often do these occur?',
+    clinicianLabel: 'Vaginal or rectal itching, or recurrent yeast infections',
+    clinicianFlag: { min: 1, syms: ['vaginal_yeast'] } },
+  { id: 'sk_nails', section: 'SK',
+    patientText: 'Brittle, ridged, or discoloured nails',
+    patientSub:  'Changes suggesting malabsorption or fungal involvement',
+    clinicianLabel: 'Brittle, ridged, or discoloured nails',
+    clinicianFlag: { min: 1, syms: ['nail_fungal'] } },
+  { id: 'sk_skin_rash', section: 'SK',
+    patientText: 'Acne, eczema, or unexplained skin rashes',
+    patientSub:  'Inflammatory skin conditions linked to gut health',
+    clinicianLabel: 'Acne, eczema, or unexplained skin rashes',
+    clinicianFlag: { min: 1, syms: ['eczema', 'acne_ros'] } },
+];
+
+// ── DERIVED INDEX — the ONLY question index in the app ──────────────────────
+// QID[id] -> flat position. Built once. Detectors, scoring, migration, and the
+// answer array all address questions through this; nothing hardcodes a number.
+const QID = Object.freeze(
+  QUESTIONS.reduce((m, q, i) => { m[q.id] = i; return m; }, {})
+);
+
+const QTOTAL = QUESTIONS.length; // 40
+
+// Per-section max = (questions in section) × 3. Computed, never declared.
+const _sectionMax = SECTIONS.reduce((m, s) => {
+  m[s.id] = QUESTIONS.filter(q => q.section === s.id).length * 3;
+  return m;
+}, {});
+function sectionMax(sectionId) { return _sectionMax[sectionId]; }
+
+// Theoretical raw ceiling (40 × 3 = 120). Single source for BMScore.
+const RAW_MAX = QTOTAL * 3;
+
+// Questions of a section, in order.
+function questionsOf(sectionId) {
+  return QUESTIONS.filter(q => q.section === sectionId);
+}
+
+// Dev sanity check — fires only if the schema is internally inconsistent.
+// (Unlike v7, this can't drift from a hand-declared max; it guards typos.)
+if (typeof console !== 'undefined') {
+  const sum = SECTIONS.reduce((t, s) => t + _sectionMax[s.id], 0);
+  if (sum !== RAW_MAX) {
+    console.warn(`[BM schema] section maxes (${sum}) != RAW_MAX (${RAW_MAX}) — check SECTIONS/QUESTIONS.`);
+  }
+}
+
+__e.SCHEMA_VERSION = SCHEMA_VERSION; __e.SECTIONS = SECTIONS; __e.QUESTIONS = QUESTIONS; __e.QID = QID; __e.QTOTAL = QTOTAL; __e.RAW_MAX = RAW_MAX; __e.sectionMax = sectionMax; __e.questionsOf = questionsOf;
+return __e;
+};
+
+__modules['scoring.js'] = function(__e){
+/* ============================================================================
+   scoring.js — the Dysbiosis Index, as PURE functions. No DOM, no globals.
+   The patient results screen, the clinician dashboard, the printed report and
+   the migration script all call THIS — there is no second copy to drift.
+
+   Raw score 0–120 (40 questions × 0–3). Because no real patient maxes every
+   antagonistic/historical item, scores normalise against an EFFECTIVE_MAX (~90)
+   where a genuinely severe presentation lands near 100%.
+     Index% = round(min(raw, EFFECTIVE_MAX) / EFFECTIVE_MAX * 100)
+   Severity bands are defined on the RAW score (so the patient code is stable)
+   and presented alongside the Index%. Ported from v7 BMScore unchanged.
+   ========================================================================== */
+
+const { SECTIONS, QUESTIONS, QID, QTOTAL, RAW_MAX, sectionMax } = __req('schema.js');
+
+const EFFECTIVE_MAX = 90; // realistic ceiling; recalibrate from real data later
+
+// Bands defined on RAW score. Colours shared across all surfaces.
+const BANDS = [
+  { label: 'Minimal',        rawMax: 21,       color: '#0F6E56', bg: '#E1F5EE', cls: 'sev-min' },
+  { label: 'Mild–Moderate',  rawMax: 41,       color: '#BA7517', bg: '#FAEEDA', cls: 'sev-mod' },
+  { label: 'Significant',    rawMax: 60,       color: '#C2622E', bg: '#FAECE7', cls: 'sev-sig' },
+  { label: 'Severe',         rawMax: Infinity, color: '#A32D2D', bg: '#FCEBEB', cls: 'sev-sev' },
+];
+
+const SEVERITY_DESC = {
+  'Minimal':       'Your result suggests minimal dysbiosis. A foundation approach with diet changes and basic probiotics is likely sufficient.',
+  'Mild–Moderate': 'Your result suggests mild-to-moderate dysbiosis. A targeted protocol is recommended — discuss with your clinician.',
+  'Significant':   'Your result suggests significant dysbiosis. A clinician-guided protocol and selective testing is recommended.',
+  'Severe':        'Your result suggests severe dysbiosis. A comprehensive clinical assessment is strongly recommended.',
+};
+
+// Index% from raw total.
+function indexPct(raw) {
+  return Math.round(Math.min(raw, EFFECTIVE_MAX) / EFFECTIVE_MAX * 100);
+}
+
+// Severity object for a raw total: {label,color,bg,cls,index,desc}.
+function severityOf(raw) {
+  const b = BANDS.find(x => raw < x.rawMax) || BANDS[BANDS.length - 1];
+  return Object.assign({}, b, { index: indexPct(raw), desc: SEVERITY_DESC[b.label] });
+}
+
+// Per-section 0–3 band from a section's raw score and max.
+function sectionBand(score, max) {
+  return Math.min(3, Math.floor(score / max * 4));
+}
+
+// Chart-background zones expressed as Index% boundaries.
+function indexZones() {
+  let prevRaw = 0; const out = [];
+  for (const b of BANDS) {
+    const top = b.rawMax === Infinity ? RAW_MAX : b.rawMax;
+    out.push({ label: b.label, color: b.color, bg: b.bg, fromPct: indexPct(prevRaw), toPct: indexPct(top) });
+    prevRaw = top;
+  }
+  return out;
+}
+
+/* ── CORE: answers (array OR id-map) → full score object ────────────────────
+   Accepts either a positional array (length QTOTAL) or an object keyed by
+   question id. Returns everything every surface needs.                        */
+function computeScores(answers) {
+  const get = Array.isArray(answers)
+    ? (id) => answers[QID[id]] ?? 0
+    : (id) => answers[id] ?? 0;
+
+  const secScores = {}; const bands = {}; let total = 0;
+  for (const sec of SECTIONS) {
+    let sc = 0;
+    for (const q of QUESTIONS) if (q.section === sec.id) sc += (get(q.id) || 0);
+    secScores[sec.id] = sc;
+    bands[sec.id] = sectionBand(sc, sectionMax(sec.id));
+    total += sc;
+  }
+  return { secScores, bands, total, severity: severityOf(total), index: indexPct(total) };
+}
+
+// Flat positional answer array (length QTOTAL) from an id-map or array.
+function toAnswerArray(answers) {
+  if (Array.isArray(answers)) {
+    const out = [];
+    for (let i = 0; i < QTOTAL; i++) out.push(answers[i] ?? 0);
+    return out;
+  }
+  return QUESTIONS.map(q => answers[q.id] ?? 0);
+}
+
+/* ── COMPACT CODE STRING (export/print/share only) ─────────────────────────
+   Format: GI{b}·IM{b}·BG{b}·ME{b}·HX{b}·SK{b}·T{total}[·PATID...]
+   e.g. "GI1·IM1·BG1·ME1·HX1·SK0·T34". Matches v7 so old codes stay readable. */
+const DOT = '·';
+function buildCode(secScores, total, patternIds = []) {
+  const bandsStr = SECTIONS.map(s => `${s.id}${sectionBand(secScores[s.id] || 0, sectionMax(s.id))}`).join(DOT);
+  const patStr = (patternIds && patternIds.length) ? DOT + patternIds.join(DOT) : '';
+  return `${bandsStr}${DOT}T${total}${patStr}`;
+}
+
+// Parse the band/total portion of a code back to {bands,total}. Patterns are
+// derived fresh from data, so any trailing pattern tokens are ignored.
+function parseCode(code) {
+  if (!code || typeof code !== 'string') return null;
+  const bands = {}; let total = null;
+  for (const tok of code.split(DOT)) {
+    const m = tok.match(/^([A-Z]{2})([0-3])$/);
+    if (m && SECTIONS.some(s => s.id === m[1])) { bands[m[1]] = +m[2]; continue; }
+    const t = tok.match(/^T(\d+)$/);
+    if (t) total = +t[1];
+  }
+  if (SECTIONS.some(s => bands[s.id] == null)) return null;
+  return { bands, total };
+}
+
+__e.EFFECTIVE_MAX = EFFECTIVE_MAX; __e.BANDS = BANDS; __e.SEVERITY_DESC = SEVERITY_DESC; __e.indexPct = indexPct; __e.severityOf = severityOf; __e.sectionBand = sectionBand; __e.indexZones = indexZones; __e.computeScores = computeScores; __e.toAnswerArray = toAnswerArray; __e.buildCode = buildCode; __e.parseCode = parseCode;
+return __e;
+};
+
+__modules['storage.js'] = function(__e){
+/* ============================================================================
+   storage.js — localStorage persistence, export, MERGE-import, and migration.
+
+   Storage decision (rebuild brief §1, resolved with the user): local-only with
+   first-class JSON export/import. Because you and a colleague work from
+   different places, import is a MERGE (by patient id + visit id), not a replace
+   — so importing a colleague's file ADDS their visits instead of wiping yours.
+   This makes manual export/import a real sync path between two devices.
+
+   Every saved record carries schemaVersion. Migration handles TWO generations
+   (brief §6):
+     - 42-question (pre-v7): drop the two retired single-item questions —
+       BG idx 21 "poor sleep" and HX idx 34 "high chronic stress" — leaving 40
+       that line up with the current schema order. (Your existing backup is
+       this generation.)
+     - 40-question (v7/current): positions already match QUESTIONS order.
+   Raw answers + extras are kept as ground truth; everything derived
+   (secScores, bands, code, patterns, severity) is RECOMPUTED cleanly.
+   ========================================================================== */
+
+const { SCHEMA_VERSION, QTOTAL } = __req('schema.js');
+const { computeScores, buildCode, severityOf } = __req('scoring.js');
+const { detectPatterns } = __req('patterns.js');
+const { pss4Score: calcPss4, sleepScore: calcSleep } = __req('scales.js');
+
+const KEY = 'beyondmechanicsgutdb';
+
+// Indices removed when collapsing the 42-question generation down to 40.
+// Descending so splicing the first doesn't shift the second.
+const LEGACY_REMOVE_42 = [34, 21];
+
+function blankDB() {
+  return { patients: [], meta: { schemaVersion: SCHEMA_VERSION, remindEvery: 5, visitsSinceExport: 0 } };
+}
+
+// ── load / save ─────────────────────────────────────────────────────────────
+function loadDB() {
+  let raw;
+  try { raw = localStorage.getItem(KEY); } catch { raw = null; }
+  if (!raw) return blankDB();
+  let db;
+  try { db = JSON.parse(raw); } catch { return blankDB(); }
+  return migrateDB(db);
+}
+
+function saveDB(db) {
+  db.meta = db.meta || {};
+  db.meta.schemaVersion = SCHEMA_VERSION;
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {
+    console.warn('[BM storage] save failed', e);
+  }
+  return db;
+}
+
+// ── id helper ───────────────────────────────────────────────────────────────
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ── MIGRATION ──────────────────────────────────────────────────────────────
+   Normalise a raw answers array to the current 40-question schema order. */
+function migrateAnswers(answers) {
+  if (!Array.isArray(answers)) return new Array(QTOTAL).fill(0);
+  let a = answers.slice();
+  if (a.length === 42) {
+    for (const idx of LEGACY_REMOVE_42) a.splice(idx, 1); // → 40
+  }
+  // Pad/truncate defensively to exactly QTOTAL.
+  if (a.length < QTOTAL) a = a.concat(new Array(QTOTAL - a.length).fill(0));
+  if (a.length > QTOTAL) a = a.slice(0, QTOTAL);
+  return a.map(v => (v == null ? 0 : v));
+}
+
+// Recompute every derived field for a visit from its raw answers + extras.
+function recomputeVisit(visit) {
+  const origLen = Array.isArray(visit.answers) ? visit.answers.length : null;
+  const answers = migrateAnswers(visit.answers);
+  const extras = visit.extras || {};
+  const pss4Score = extras.pss4Score != null ? extras.pss4Score : calcPss4(extras.pss4);
+  const sleepScore = extras.sleepScore != null ? extras.sleepScore : calcSleep(extras.sleep);
+
+  const { secScores, bands, total } = computeScores(answers);
+  const detectExtras = {
+    bristol: extras.bristol ?? null, pss4Score, sleepScore,
+    nrsPain: extras.nrsPain ?? null, painRegion: extras.painRegion ?? null,
+  };
+  const fired = detectPatterns(secScores, answers, detectExtras);
+  const patternIds = fired.map(p => p.id);
+
+  return {
+    ...visit,
+    answers,
+    extras: { ...extras, pss4Score, sleepScore },
+    secScores, bands, total,
+    severity: severityOf(total).label,
+    patterns: patternIds,
+    code: buildCode(secScores, total, patternIds),
+    schemaVersion: SCHEMA_VERSION,
+    _migratedFrom: origLen && origLen !== QTOTAL ? `${origLen}q` : (visit._migratedFrom || `${QTOTAL}q`),
+  };
+}
+
+// Migrate a whole DB. Idempotent: re-running on current-gen data is a no-op
+// in substance (it just recomputes derived fields, which are stable).
+function migrateDB(db) {
+  if (!db || !Array.isArray(db.patients)) return blankDB();
+  const alreadyCurrent = db.meta && db.meta.schemaVersion === SCHEMA_VERSION;
+  const patients = db.patients.map(p => ({
+    ...p,
+    visits: (p.visits || []).map(v => {
+      // Skip recompute only if visit is already stamped current AND looks intact.
+      if (alreadyCurrent && v.schemaVersion === SCHEMA_VERSION &&
+          Array.isArray(v.answers) && v.answers.length === QTOTAL) return v;
+      return recomputeVisit(v);
+    }),
+  }));
+  return { patients, meta: { ...blankDB().meta, ...(db.meta || {}), schemaVersion: SCHEMA_VERSION } };
+}
+
+/* ── EXPORT ──────────────────────────────────────────────────────────────────
+   Stamped with schemaVersion + timestamp + device label so a colleague's file
+   is self-describing on import. */
+function exportDB(db, deviceLabel) {
+  const payload = {
+    ...db,
+    meta: {
+      ...(db.meta || {}),
+      schemaVersion: SCHEMA_VERSION,
+      exportedFrom: deviceLabel || 'unknown-device',
+      date: Date.now(),
+    },
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+/* ── MERGE-IMPORT ────────────────────────────────────────────────────────────
+   Merge an imported DB into the current one. Patients matched by id; within a
+   patient, visits matched by visit id (deduped). Imported data is migrated
+   first. Returns {db, added:{patients,visits}, updated}.                       */
+function mergeImport(currentDb, importedRaw) {
+  let imported;
+  if (typeof importedRaw === 'string') {
+    imported = JSON.parse(importedRaw); // may throw — caller handles
+  } else {
+    imported = importedRaw;
+  }
+  imported = migrateDB(imported);
+  const cur = migrateDB(currentDb);
+
+  const byId = new Map(cur.patients.map(p => [p.id, p]));
+  let addedPatients = 0, addedVisits = 0, updated = 0;
+
+  for (const ip of imported.patients) {
+    let target = byId.get(ip.id);
+    if (!target) {
+      target = { ...ip, visits: [] };
+      cur.patients.push(target);
+      byId.set(ip.id, target);
+      addedPatients++;
+    } else {
+      // Fill in blanks on existing patient meta without clobbering edits.
+      ['name', 'ref', 'dob', 'sex'].forEach(k => { if (!target[k] && ip[k]) { target[k] = ip[k]; updated++; } });
+    }
+    const haveVisit = new Set((target.visits || []).map(v => v.id));
+    for (const iv of (ip.visits || [])) {
+      const vid = iv.id || uid();
+      if (haveVisit.has(vid)) continue;
+      target.visits = target.visits || [];
+      target.visits.push({ ...iv, id: vid });
+      haveVisit.add(vid);
+      addedVisits++;
+    }
+    // Keep each patient's visits in chronological order.
+    (target.visits || []).sort((a, b) => (a.date || 0) - (b.date || 0));
+  }
+
+  return { db: cur, added: { patients: addedPatients, visits: addedVisits }, updated };
+}
+
+__e.blankDB = blankDB; __e.loadDB = loadDB; __e.saveDB = saveDB; __e.uid = uid; __e.migrateAnswers = migrateAnswers; __e.recomputeVisit = recomputeVisit; __e.migrateDB = migrateDB; __e.exportDB = exportDB; __e.mergeImport = mergeImport;
+return __e;
+};
+
+__modules['strains.js'] = function(__e){
+/* ============================================================================
+   strains.js — the probiotic strain database, and ONE ranking function used by
+   BOTH the live clinician dashboard and the printed report.
+
+   This is the fix for rebuild brief §8.1: v7 had two independent copies of the
+   strain scorer and the report copy was missing seven rules, so a clinician
+   could see one ranked list on screen and hand the patient a printed report
+   recommending different top strains. There is now exactly one ranker — they
+   cannot disagree.
+
+   The ruleset here is the COMPLETE (superset) dashboard ruleset, with one
+   deliberate change for the sleep reconciliation (brief §3): the clinician
+   `poor_sleep` checkbox no longer feeds an independent strain bonus. Sleep
+   influences ranking through the ONE canonical validated sleep score
+   (extras.sleepScore) only; `poor_sleep` remains a recordable symptom.
+
+   Strain content (names, CFU, timing, India brands, evidence tier, warnings)
+   ported verbatim from v7.
+   ========================================================================== */
+
+const STRAINS = {
+  // ── TIER 1: First-line, widely India-available ──────────────────────
+  SBO: { name: 'S. boulardii CNCM I-745', ev: 'High', cfu: '250–500mg (≈5B CFU) BD', timing: 'Anytime — with or without food. Safe with antibiotics.',
+    indication: "Post-antibiotic restoration, C. diff prevention, Candida control, traveller's diarrhoea, IBS-D",
+    india: "Econorm (Dr Reddy's) 250mg sachet/capsule · Sova Plug The Flow 5B CFU sachet · Sporlac Qik — Indian retail / pharmacy",
+    patterns: ['FUNGAL', 'SIBO'],
+    note: 'Yeast — unaffected by antibiotics. Do NOT refrigerate. Room-temperature stable.' },
+  LGG: { name: 'L. rhamnosus GG (ATCC 53103)', ev: 'High', cfu: '3–20B CFU', timing: 'With or without food. 2 hrs apart from antibiotic dose.',
+    indication: 'Antibiotic diarrhoea prevention, childhood diarrhoea, mucosal sIgA, eczema prevention in infants, IBS',
+    india: 'Superflora GG capsule / sachet (Sundyota Numandis) — first standalone Indian LGG · Darolac (blend) · Sova Gut Set Go',
+    patterns: ['LEAKY', 'THYROID', 'AUTOIMMUNE'],
+    note: 'Superflora GG is the first standalone Indian LGG product. Shelf-stable, no refrigeration.' },
+  LPL: { name: 'L. plantarum 299v', ev: 'High', cfu: '10B CFU', timing: '30 min before meals — fasted for best effect',
+    indication: 'IBS bloating and gas (dominant complaint), abdominal discomfort, tight junction repair, portal LPS reduction',
+    india: 'Darolac IBS (Aristo Pharma) 10B CFU capsule — ₹42/cap. Indian retail. Single-strain 299v.',
+    patterns: ['LEAKY', 'SIBO', 'METABOLIC'],
+    warn: 'Velgut is NOT a 299v product — it is a generic multi-strain blend. Darolac IBS is the correct India product.' },
+  BCO: { name: 'B. coagulans MTCC 5856', ev: 'Moderate', cfu: '1–2B CFU', timing: 'With meals',
+    indication: 'Spore-former — antibiotic-safe, IBS, post-SIBO eradication, dyspepsia, general gut restoration',
+    india: 'Sporlac DS / Sporlac Plus (Sanzyme) · Vizylac (Torrent) · Bifilac — Indian retail widely available',
+    patterns: ['SIBO', 'IMO'],
+    note: 'Spore-former: can be taken AT SAME TIME as antibiotics. Heat-stable. "Lactic Acid Bacillus" on Indian pack = B. coagulans.' },
+  BCL: { name: 'B. clausii (4-strain: OC, N/R, SIN, T)', ev: 'High', cfu: '2B spores per ampoule', timing: 'Twice daily. At SAME TIME as antibiotics.',
+    indication: 'Antibiotic-associated diarrhoea, gut flora restoration, H. pylori treatment support, childhood AAD',
+    india: 'Enterogermina (Sanofi India) — oral suspension ampoules, Indian retail. Most widely prescribed Indian probiotic.',
+    patterns: ['SIBO'],
+    note: "4-strain combination. Spore-former — fully antibiotic-resistant. UBL also makes Bacipro (B. clausii UBBC-07) — single-strain, different from Enterogermina's 4-strain." },
+  // ── TIER 2: Evidence-strong, India-accessible ───────────────────────
+  LRE: { name: 'L. reuteri DSM 17938', ev: 'High', cfu: '100M CFU (chewable) / 5 drops (infant)', timing: 'With food',
+    indication: 'Infant colic, constipation, H. pylori adjunct, gut motility, cholesterol reduction, oxytocin pathway',
+    india: 'BioGaia Protectis chewable tablet (import via iThrive / Amazon Global) · Pyloflush / Sonata LR / Pyloduce (Pylopass™ heat-killed — DSMZ 17648) — Indian pharmacy',
+    patterns: ['SIBO', 'PSYCHO'],
+    note: 'BioGaia Protectis = live DSM 17938 (infant colic, motility). Pyloflush/Pyloduce = DSMZ 17648 heat-killed (H. pylori adjunct only) — different mechanism, do not substitute. Room-temperature stable (chewable).' },
+  BIN: { name: 'B. longum subsp. infantis 35624', ev: 'High', cfu: '1B CFU — exact dose', timing: 'Once daily with food',
+    indication: 'IBS all subtypes (pain dominant), immune tolerance, TNF-α and IL-6 reduction, visceral hypersensitivity',
+    india: 'Align (Procter & Gamble) — import via Amazon Global · Visbiome (IBD-grade, import specialist distributors)',
+    patterns: ['LEAKY', 'AUTOIMMUNE'],
+    warn: '1B CFU is the exact studied dose — do NOT substitute a higher-dose generic B. infantis product. Evidence is specifically for this dose and strain designation.' },
+  LHE: { name: 'L. helveticus R0052 + B. longum R0175', ev: 'High', cfu: '3B CFU each', timing: 'Bedtime — overnight GABA and tryptophan production',
+    indication: 'Chronic psychological stress, mild anxiety, gut-brain axis, cortisol reduction (RCT proven)',
+    india: "Probio'Stick (Lallemand Health Solutions) — import via iHerb / Amazon Global. ₹2,100–3,000/30 sachets.",
+    patterns: ['PSYCHO'],
+    note: 'Dissolve in cool water — never hot. Do not substitute individual strains. Bedtime administration matches the cortisol and sleep evidence.' },
+  BLG: { name: 'B. longum BB536', ev: 'High', cfu: '5–20B CFU', timing: 'Evening with food',
+    indication: 'Allergic rhinitis, hay fever, pollen allergy, nasal congestion, atopic conditions, IgE reduction, immune regulation',
+    india: 'BB536 Products (Morinaga Japan) — import via iHerb. Remune AL (Sundyota Numandis, Indian pharmacy) also contains BB536.',
+    patterns: ['THYROID', 'AUTOIMMUNE'],
+    note: 'Add to METABOLIC and AUTOIMMUNE — BB536 reduces pro-inflammatory cytokines and improves NK cell activity in atopic/RA conditions.' },
+  // ── TIER 3: Condition-specific, some India access ───────────────────
+  BCU: { name: 'B. clausii UBBC-07 (single strain)', ev: 'Moderate', cfu: 'Per label', timing: 'Twice daily',
+    indication: "Antibiotic-associated diarrhoea, children's upper respiratory tract infections (URTI), immunomodulation",
+    india: "Bacipro (Unique Biotech Ltd / Velbiom) — 1mg, bacipro.com. Single-strain — different from Enterogermina's 4-strain combination.",
+    patterns: ['SIBO'] },
+  NCF: { name: 'L. acidophilus NCFM®', ev: 'High', cfu: 'Per label', timing: 'With food',
+    indication: 'Lactose intolerance, IBS, daily gut balance, Candida competitive exclusion',
+    india: 'The Stack Daily Gut Balance (The Stack India) — NCFM + PHGG prebiotic. Indian online (D2C). First standalone Indian NCFM product.',
+    patterns: ['LEAKY', 'FUNGAL'],
+    note: 'First standalone Indian NCFM product (The Stack). Previously import-only.' },
+  AKK: { name: 'Akkermansia muciniphila (pasteurised)', ev: 'Emerging', cfu: '100M AFU', timing: 'Before meals, fasted — 30 min before food',
+    indication: 'Insulin resistance, metabolic syndrome, gut barrier integrity, NAFLD — cannot be obtained from any food source',
+    india: 'Pendulum Akkermansia (Pendulum, USA) — import via Amazon.com or iHerb. ₹4,300–6,000/month.',
+    patterns: ['METABOLIC'],
+    warn: 'Indian "Akkermansia" generic blends (e.g. Nutrazen Forever Gut) are AVOID — Akkermansia is a strict anaerobe that cannot survive standard capsule manufacturing. Only pasteurised Pendulum product has clinical evidence. Live form not yet commercially approved.' },
+  LGA: { name: 'L. gasseri SBT2055 / BNR17', ev: 'High', cfu: '10–20B CFU', timing: 'With food',
+    indication: 'Visceral fat reduction, abdominal obesity, weight management support alongside diet and exercise',
+    india: 'L. gasseri Products (Japanese brands via iHerb/Amazon Global). Import only. ₹2,100–3,400/30 caps.',
+    patterns: ['METABOLIC'],
+    note: 'Japanese strain. 12–24 weeks for measurable visceral fat effect. Import only.' },
+  VSL: { name: 'VSL#3 — 8-strain (De Simone Formulation)', ev: 'High', cfu: '112B–450B CFU', timing: 'Cold drink or food. Never hot. Refrigerate strictly.',
+    indication: 'Ulcerative colitis maintenance, pouchitis (post bowel surgery), paediatric UC',
+    india: 'VSL#3 capsule/sachet (Cipla India) — Rx/Hospital prescription. ₹39–46/cap (₹390–460/10). Cold chain essential.',
+    patterns: ['AUTOIMMUNE'],
+    warn: 'Strict cold chain. Prescribe with gastroenterologist co-management for IBD. Original De Simone Formulation = Visbiome (import, higher dose 450B). Cipla VSL#3 capsule 112.5B per cap; sachet 450B per sachet.' },
+};
+
+// Accept a Set or array uniformly.
+function has(coll, v) {
+  if (!coll) return false;
+  return typeof coll.has === 'function' ? coll.has(v) : coll.indexOf(v) >= 0;
+}
+const inSet = (id, list) => list.indexOf(id) >= 0;
+
+/* ── THE single strain ranker ───────────────────────────────────────────────
+   ctx = {
+     patternIds : array/Set of fired pattern ids,
+     bands      : {GI,IM,BG,ME,HX,SK}  (0–3),
+     syms       : array/Set of clinician symptom ids,
+     meds       : array/Set of medication ids,
+     conds      : array/Set of condition ids,
+     extras     : {pss4Score, sleepScore} | null
+   }
+   Returns ALL strains with a computed score, sorted desc. Callers slice/filter
+   (dashboard shows all; report takes score>0, top 6).                         */
+function rankStrains(ctx) {
+  const patterns = Array.from(ctx.patternIds || []); // accept Set or array
+  const bands = ctx.bands || {};
+  const syms = ctx.syms; const meds = ctx.meds; const conds = ctx.conds;
+  const extras = ctx.extras;
+  const b = (k) => bands[k] || 0;
+
+  return Object.entries(STRAINS).map(([id, s]) => {
+    let score = 0;
+
+    // Pattern match boost (+3 per matched pattern)
+    patterns.forEach(pid => { if (s.patterns.includes(pid)) score += 3; });
+
+    // Section-severity boosts
+    if (b('GI') >= 2 && inSet(id, ['LGG', 'LPL', 'BIN', 'BCO', 'BCL', 'NCF'])) score += b('GI');
+    if (b('BG') >= 2 && inSet(id, ['LHE', 'LRE'])) score += b('BG');
+    if (b('IM') >= 2 && inSet(id, ['LGG', 'BLG', 'BIN', 'VSL'])) score += b('IM');
+    if (b('ME') >= 2 && inSet(id, ['AKK', 'LGA', 'LPL'])) score += b('ME');
+    if (b('SK') >= 2 && inSet(id, ['LGG', 'LPL', 'SBO', 'NCF'])) score += b('SK');
+
+    // Symptom-specific boosts
+    if (has(syms, 'bloating') && inSet(id, ['LPL', 'BCO'])) score += 2;
+    if (has(syms, 'diarrhoea') && inSet(id, ['SBO', 'BCL', 'BCO'])) score += 2;
+    if (has(syms, 'constip') && inSet(id, ['BCO', 'LRE'])) score += 2;
+    if (has(syms, 'reflux') && has(meds, 'ppi') && id === 'LRE') score += 2;
+    if (has(syms, 'anxiety') && id === 'LHE') score += 2;
+    if (has(syms, 'brainfog') && id === 'LHE') score += 2;
+    // NOTE: clinician `poor_sleep` checkbox intentionally does NOT score here.
+    // Sleep enters ranking only through the validated sleepScore below — one
+    // canonical sleep signal (rebuild brief §3 reconciliation).
+
+    // Validated stress/sleep (Modifiable Drivers) — the one canonical signal.
+    if (extras) {
+      if (extras.pss4Score != null && extras.pss4Score >= 10 && inSet(id, ['LHE', 'LRE'])) score += 2;
+      if (extras.sleepScore != null && extras.sleepScore >= 7 && inSet(id, ['LHE', 'LRE'])) score += 2;
+    }
+
+    if (has(syms, 'weight_gain') && inSet(id, ['AKK', 'LGA'])) score += 2;
+    if (has(syms, 'fatty_liver') && inSet(id, ['LPL', 'AKK'])) score += 2;
+    if (has(syms, 'thyroid_sym') && id === 'BLG') score += 2;
+    if (has(syms, 'eczema') && inSet(id, ['BLG', 'LGG'])) score += 2;
+    if (has(syms, 'joint_pain') && inSet(id, ['BIN', 'BLG'])) score += 2;
+    if ((has(meds, 'abx_recent') || has(meds, 'abx_multiple')) && inSet(id, ['SBO', 'BCO', 'BCL', 'LGG'])) score += 3;
+    if (has(meds, 'hpylori_tx') && inSet(id, ['LRE', 'SBO'])) score += 3;
+
+    // Pattern-level boosts/deprioritise
+    if (inSet('POST_INF', patterns) && inSet(id, ['LGG', 'BIN', 'SBO'])) score += 2;
+    if (inSet('HISTAMINE', patterns) && inSet(id, ['LGG', 'BIN', 'SBO'])) score += 2;
+    if (inSet('HISTAMINE', patterns) && inSet(id, ['BCL', 'BCO'])) score -= 1; // not histamine-specific
+
+    // Condition direct boosts
+    if (has(conds, 'hashimotos') && inSet(id, ['BLG', 'LGG'])) score += 2;
+    if (has(conds, 'pcos') && inSet(id, ['LPL', 'LGA'])) score += 2;
+    if (has(conds, 'nafld') && inSet(id, ['LPL', 'AKK'])) score += 2;
+    if (has(conds, 't2dm_ir') && inSet(id, ['AKK', 'LGA'])) score += 2;
+    if (has(conds, 'ibd') && inSet(id, ['VSL', 'BIN', 'LGG'])) score += 2;
+
+    return { id, ...s, score };
+  }).sort((a, b2) => b2.score - a.score);
+}
+
+__e.STRAINS = STRAINS; __e.rankStrains = rankStrains;
+return __e;
+};
+
+__modules['ui-clinician.js'] = function(__e){
+/* ============================================================================
+   ui-clinician.js — clinician dashboard. Loads a questionnaire visit (full,
+   answer-level pattern detection + auto-derived flags) OR supports manual entry
+   via section sliders + symptom/condition/medication checkboxes. Renders
+   patterns, strains (the ONE shared ranker), labs and protocols.
+
+   Audience gating (brief §8.4): a banner states this is for physician
+   co-management / review before anything reaches a patient. Rx items retained.
+   ========================================================================== */
+
+const { SECTIONS, sectionMax } = __req('schema.js');
+const { computeScores, severityOf, parseCode, buildCode } = __req('scoring.js');
+const { detectPatterns, PATTERNS, patternById } = __req('patterns.js');
+const { rankStrains } = __req('strains.js');
+const { LAB_TESTS, AVAIL_LABELS, relevantLabs } = __req('labs.js');
+const { SYM_GROUPS, CONDITIONS, MEDS, deriveClinicianFlags } = __req('clinician-derive.js');
+const { pss4Band, sleepBand, painBand } = __req('scales.js');
+const { el, esc, toast } = __req('util.js');
+
+let ctx;
+let state;
+
+function blankState() {
+  return {
+    bands: { GI: 0, IM: 0, BG: 0, ME: 0, HX: 0, SK: 0 },
+    secScores: null, total: 0,
+    syms: new Set(), conds: new Set(), meds: new Set(), fromIntake: new Set(),
+    extras: null, rawAnswers: null, patterns: [],
+    patientName: '', notes: '', activeTab: 'patterns',
+  };
+}
+
+function init(appCtx) { ctx = appCtx; if (!state) state = blankState(); }
+
+// Approx per-section score from a 0–3 band when exact secScores absent.
+const approx = (band, max) => Math.round(band / 3 * max);
+function domainScore(id) {
+  if (state.secScores && state.secScores[id] != null) return state.secScores[id];
+  return approx(state.bands[id], sectionMax(id));
+}
+function totalScore() {
+  if (state.secScores) return Object.values(state.secScores).reduce((a, b) => a + b, 0);
+  return SECTIONS.reduce((t, s) => t + approx(state.bands[s.id], sectionMax(s.id)), 0);
+}
+
+// Load a visit (from questionnaire or saved record) into clinician state.
+function loadVisit(visit) {
+  state = blankState();
+  state.secScores = visit.secScores || null;
+  state.bands = visit.bands ? { ...visit.bands }
+    : (visit.secScores ? SECTIONS.reduce((b, s) => { b[s.id] = computeScores(visit.answers || []).bands[s.id]; return b; }, {}) : state.bands);
+  state.rawAnswers = visit.answers || null;
+  state.extras = visit.extras || null;
+  state.notes = visit.notes || '';
+  if (visit.answers) {
+    const d = deriveClinicianFlags(visit.answers, visit.extras);
+    state.syms = d.syms; state.meds = d.meds; state.fromIntake = d.fromIntake;
+  }
+  recompute();
+}
+
+function render() {
+  if (!state) state = blankState();
+  const root = document.getElementById('mode-clinician');
+  root.innerHTML = '';
+
+  root.appendChild(el('div', { class: 'gate-note' },
+    `<b>Clinician view — for physician co-management.</b> Protocols below include prescription-only agents (Rifaximin, etc.) ` +
+    `and drug-interaction calls. This is decision-support for review by a prescribing clinician before anything reaches a patient — not patient-facing instructions.`));
+
+  const grid = el('div', { class: 'clin-grid' });
+  grid.appendChild(leftColumn());
+  grid.appendChild(el('div', { id: 'clin-right' }));
+  root.appendChild(grid);
+  renderRight();
+}
+
+function leftColumn() {
+  const col = el('div', { class: 'left-col' });
+
+  // Code input
+  const codeCard = el('div', { class: 'card' });
+  codeCard.appendChild(el('h3', {}, 'Load a code'));
+  const ci = el('input', { class: 'db-search', placeholder: 'e.g. GI2·IM1·BG1·ME0·HX1·SK0·T34', style: 'width:100%;margin:8px 0' });
+  const btn = el('button', { class: 'btn btn-o', style: 'width:100%' }, 'Parse code');
+  btn.onclick = () => {
+    const parsed = parseCode(ci.value.trim());
+    if (!parsed) { toast('Could not parse that code'); return; }
+    state = blankState();
+    state.bands = parsed.bands;
+    recompute(); render();
+    toast('Code loaded (manual mode)');
+  };
+  codeCard.appendChild(ci); codeCard.appendChild(btn);
+  col.appendChild(codeCard);
+
+  // Sliders (manual band entry)
+  const sl = el('div', { class: 'card' });
+  sl.appendChild(el('h3', {}, 'Domain severity (manual)'));
+  sl.appendChild(el('div', { class: 'q-sub' }, state.secScores ? 'Loaded from questionnaire — exact scores in use.' : 'Set 0–3 per domain, or load a questionnaire for exact scoring.'));
+  SECTIONS.forEach(s => {
+    const head = el('div', { class: 'sh' });
+    head.appendChild(el('span', {}, esc(s.full)));
+    const vlabel = el('span', { style: 'font-weight:700' }, String(state.bands[s.id]));
+    head.appendChild(vlabel);
+    const input = el('input', { type: 'range', min: '0', max: '3', step: '1', value: String(state.bands[s.id]) });
+    input.oninput = () => {
+      state.bands[s.id] = +input.value; vlabel.textContent = input.value;
+      state.secScores = null; // manual edit drops exact scores
+      recompute(); renderRight();
+    };
+    const wrap = el('div', { class: 'slider-row' });
+    wrap.appendChild(head); wrap.appendChild(input);
+    sl.appendChild(wrap);
+  });
+  col.appendChild(sl);
+
+  // Symptom checkboxes
+  const symCard = el('div', { class: 'card' });
+  symCard.appendChild(el('h3', {}, 'Symptoms'));
+  SYM_GROUPS.forEach(g => {
+    symCard.appendChild(el('div', { class: 'grp-label', style: `color:${g.color}` }, esc(g.label)));
+    const grid = el('div', { class: 'sym-grid' });
+    g.syms.forEach(s => grid.appendChild(checkbox(s.id, s.label, state.syms)));
+    symCard.appendChild(grid);
+  });
+  col.appendChild(symCard);
+
+  // Conditions
+  const condCard = el('div', { class: 'card' });
+  condCard.appendChild(el('h3', {}, 'Conditions / diagnoses'));
+  const cg = el('div', { class: 'cond-grid', style: 'margin-top:8px' });
+  CONDITIONS.forEach(c => {
+    const on = state.conds.has(c.id);
+    const t = el('button', { class: `cond${on ? ' on' : ''}`, type: 'button', style: on ? `border-color:${c.color};background:${c.bg}` : '' },
+      `<span class="cond-dot" style="background:${c.color}"></span>${esc(c.label)}`);
+    t.onclick = () => { state.conds.has(c.id) ? state.conds.delete(c.id) : state.conds.add(c.id); recompute(); render(); };
+    cg.appendChild(t);
+  });
+  condCard.appendChild(cg);
+  col.appendChild(condCard);
+
+  // Medications
+  const medCard = el('div', { class: 'card' });
+  medCard.appendChild(el('h3', {}, 'Medications / history'));
+  const mg = el('div', { class: 'sym-grid', style: 'margin-top:8px' });
+  MEDS.forEach(m => mg.appendChild(checkbox(m.id, m.label, state.meds)));
+  medCard.appendChild(mg);
+  col.appendChild(medCard);
+
+  return col;
+}
+
+function checkbox(id, label, set) {
+  const on = set.has(id);
+  const fromIntake = state.fromIntake.has(id);
+  const lab = el('label', { class: `cb${on ? ' active' : ''}` });
+  const cbx = el('input', { type: 'checkbox' });
+  cbx.checked = on;
+  cbx.onchange = () => { cbx.checked ? set.add(id) : set.delete(id); recompute(); render(); };
+  lab.appendChild(cbx);
+  lab.appendChild(el('span', {}, esc(label) + (fromIntake ? ' <span class="tag-intake">from intake</span>' : '')));
+  return lab;
+}
+
+// Recompute fired patterns from current state.
+function recompute() {
+  const secScores = SECTIONS.reduce((o, s) => { o[s.id] = domainScore(s.id); return o; }, {});
+  const set = new Set();
+  // Full answer-level detection when a questionnaire is loaded.
+  if (state.rawAnswers) {
+    const ex = state.extras ? {
+      bristol: state.extras.bristol ?? null, pss4Score: state.extras.pss4Score ?? null,
+      sleepScore: state.extras.sleepScore ?? null, nrsPain: state.extras.nrsPain ?? null,
+    } : {};
+    detectPatterns(secScores, state.rawAnswers, ex).forEach(p => set.add(p.id));
+  }
+  // Manual lever: conditions + medications carry pattern associations.
+  CONDITIONS.forEach(c => { if (state.conds.has(c.id)) c.pats.forEach(p => set.add(p)); });
+  MEDS.forEach(m => { if (state.meds.has(m.id)) m.pats.forEach(p => set.add(p)); });
+  // Preserve canonical order.
+  state.patterns = PATTERNS.filter(p => set.has(p.id)).map(p => p.id);
+  state.total = totalScore();
+}
+
+function renderRight() {
+  const right = document.getElementById('clin-right');
+  if (!right) return;
+  right.innerHTML = '';
+  right.appendChild(scoreSummary());
+  right.appendChild(driversCard());
+
+  const tabs = el('div', { class: 'tabs' });
+  const panes = el('div');
+  const tabDefs = [['patterns', 'Patterns'], ['strains', 'Strains'], ['labs', 'Lab guide'], ['protocol', 'Protocols']];
+  tabDefs.forEach(([id, label]) => {
+    const t = el('button', { class: `tab${state.activeTab === id ? ' active' : ''}` }, label);
+    t.onclick = () => { state.activeTab = id; renderRight(); };
+    tabs.appendChild(t);
+  });
+  right.appendChild(tabs);
+  if (state.activeTab === 'patterns') panes.appendChild(patternsPane());
+  else if (state.activeTab === 'strains') panes.appendChild(strainsPane());
+  else if (state.activeTab === 'labs') panes.appendChild(labsPane());
+  else panes.appendChild(protocolPane());
+  right.appendChild(panes);
+
+  // Save bar
+  const bar = el('div', { class: 'save-bar' });
+  bar.appendChild(el('div', { style: 'flex:1;min-width:140px;font-size:12px;color:var(--inks)' },
+    `Code: <b>${esc(buildCode(SECTIONS.reduce((o, s) => { o[s.id] = domainScore(s.id); return o; }, {}), totalScore(), state.patterns))}</b>`));
+  bar.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.printReport(buildSnapshot()) }, 'Print report'));
+  bar.appendChild(el('button', { class: 'btn btn-g', onclick: () => ctx.saveVisit(buildSnapshot()) }, 'Save to patient'));
+  right.appendChild(bar);
+}
+
+function scoreSummary() {
+  const total = totalScore(); const sv = severityOf(total);
+  const card = el('div', { class: 'card' });
+  const row = el('div', { class: 'row', style: 'align-items:center' });
+  row.appendChild(el('div', { style: `font-size:36px;font-weight:800;color:var(--g)` }, String(sv.index) + '%'));
+  const bars = el('div', { style: 'flex:1;min-width:180px' });
+  bars.appendChild(el('div', {}, `<span class="pill ${sv.cls}">${esc(sv.label)}</span> <span class="muted" style="font-size:12px">raw ${total}/120</span>`));
+  SECTIONS.forEach(s => {
+    const sc = domainScore(s.id); const max = sectionMax(s.id); const p = Math.round(sc / max * 100);
+    bars.appendChild(el('div', { class: 'bar-row' },
+      `<div class="bar-label"><span>${s.label}</span><span class="muted">${sc}/${max}</span></div>
+       <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${s.color}"></div></div>`));
+  });
+  row.appendChild(bars);
+  card.appendChild(row);
+  return card;
+}
+
+function driversCard() {
+  const ex = state.extras || {};
+  const ps = pss4Band(ex.pss4Score ?? null);
+  const sl = sleepBand(ex.sleepScore ?? null);
+  const pn = painBand(ex.nrsPain ?? null);
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h3', {}, 'Modifiable drivers'));
+  const g = el('div', { class: 'drivers', style: 'margin-top:8px' });
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">Stress (PSS-4)</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">Sleep</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">Pain (NRS)</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv">${ex.bristol ?? '—'}</div><div class="dl">Bristol type</div>`));
+  card.appendChild(g);
+  return card;
+}
+
+function patternsPane() {
+  const pane = el('div', { class: 'tabpane show' });
+  if (!state.patterns.length) { pane.appendChild(el('div', { class: 'card muted' }, 'No patterns flagged. Load a questionnaire or select conditions/medications.')); return pane; }
+  state.patterns.forEach(pid => {
+    const p = patternById(pid);
+    const a = el('div', { class: 'pat-alert', style: `background:${p.bg};border-color:${p.border || p.color}` });
+    a.appendChild(el('div', { class: 'pa-ic' }, p.emoji));
+    const body = el('div', { style: 'flex:1' });
+    body.appendChild(el('div', { class: 'pa-title', style: `color:${p.color}` }, esc(p.label)));
+    body.appendChild(el('div', { class: 'pa-desc' }, esc(p.desc)));
+    body.appendChild(el('div', { class: 'pa-block' }, `<b>Tests:</b> ${p.tests.map(esc).join(' · ')}`));
+    body.appendChild(el('div', { class: 'pa-block', style: 'color:var(--re)' }, `<b>Avoid:</b> ${esc(p.avoid)}`));
+    a.appendChild(body);
+    pane.appendChild(a);
+  });
+  return pane;
+}
+
+function strainsPane() {
+  const pane = el('div', { class: 'tabpane show' });
+  const ranked = rankStrains({
+    patternIds: state.patterns, bands: state.bands,
+    syms: state.syms, meds: state.meds, conds: state.conds, extras: state.extras,
+  });
+  pane.appendChild(el('div', { class: 'q-sub', style: 'margin-bottom:8px' }, 'Ranked by fired patterns, domain severity, symptoms, conditions and medications. Indian brands from product catalogue.'));
+  const list = el('div', { class: 'strain-list' });
+  const evColor = { High: '#085041', Moderate: '#633806', Emerging: '#042C53' };
+  const evBg = { High: '#E1F5EE', Moderate: '#FAEEDA', Emerging: '#E6F1FB' };
+  const rankBg = ['#0F6E56', '#BA7517', '#185FA5', '#888780'];
+  ranked.forEach((s, i) => {
+    const top = i < 4 && s.score > 0;
+    const card = el('div', { class: `strain${top ? ' top' : ''}` });
+    card.appendChild(el('div', { class: 'sc-head' },
+      `<div class="sc-rank" style="background:${rankBg[Math.min(i, 3)]}">${i + 1}</div>
+       <div class="sc-name">${esc(s.name)}</div>
+       <div class="sc-ev" style="color:${evColor[s.ev]};background:${evBg[s.ev]}">${esc(s.ev)}</div>`));
+    const body = el('div', { class: 'sc-body' });
+    body.appendChild(el('div', {}, `${esc(s.indication)}`));
+    body.appendChild(el('div', { class: 'muted', style: 'margin-top:3px' }, `${esc(s.cfu)} · ${esc(s.timing)}`));
+    body.appendChild(el('div', { class: 'india' }, esc(s.india)));
+    if (s.warn) body.appendChild(el('div', { class: 'warn' }, '⚠ ' + esc(s.warn)));
+    card.appendChild(body);
+    list.appendChild(card);
+  });
+  pane.appendChild(list);
+  return pane;
+}
+
+function labsPane() {
+  const pane = el('div', { class: 'tabpane show' });
+  const cats = state.patterns.length ? relevantLabs(state.patterns) : LAB_TESTS;
+  cats.forEach(cat => {
+    const c = el('div', { class: 'lab-cat' });
+    c.appendChild(el('div', { class: 'lab-cat-h', style: `background:${cat.bg};color:${cat.color}` }, esc(cat.category)));
+    cat.tests.forEach(t => {
+      const av = AVAIL_LABELS[t.avail] || AVAIL_LABELS.yes;
+      const row = el('div', { class: 'lab-row' });
+      row.appendChild(el('div', { style: 'flex:1' },
+        `<div class="lr-name">${esc(t.name)} <span class="av ${av.cls}">${av.label}</span></div>
+         <div class="lr-desc">${esc(t.desc)}</div>${t.where ? `<div class="lr-where">${esc(t.where)}</div>` : ''}`));
+      row.appendChild(el('div', { class: 'lr-right' }, `<div class="lr-opt">${esc(t.opt)}</div><div class="lr-cost">${esc(t.cost)}</div>`));
+      c.appendChild(row);
+    });
+    pane.appendChild(c);
+  });
+  return pane;
+}
+
+function protocolPane() {
+  const pane = el('div', { class: 'tabpane show' });
+  if (!state.patterns.length) { pane.appendChild(el('div', { class: 'card muted' }, 'No patterns flagged — no protocol to show.')); return pane; }
+  state.patterns.forEach(pid => {
+    const p = patternById(pid);
+    const card = el('div', { class: 'card' });
+    card.appendChild(el('div', { class: 'pa-title', style: `color:${p.color};margin-bottom:6px` }, `${p.emoji} ${esc(p.label)}`));
+    card.appendChild(el('div', { class: 'pa-block' }, `<b>Protocol:</b> ${esc(p.protocol)}`));
+    card.appendChild(el('div', { class: 'pa-block', style: 'color:var(--re)' }, `<b>Avoid:</b> ${esc(p.avoid)}`));
+    pane.appendChild(card);
+  });
+  return pane;
+}
+
+// Build a canonical visit snapshot for saving / printing.
+function buildSnapshot() {
+  const secScores = SECTIONS.reduce((o, s) => { o[s.id] = domainScore(s.id); return o; }, {});
+  const total = totalScore();
+  return {
+    date: Date.now(), source: state.rawAnswers ? 'clinician (from intake)' : 'clinician',
+    answers: state.rawAnswers || null,
+    extras: state.extras || {},
+    secScores, bands: { ...state.bands }, total,
+    severity: severityOf(total).label,
+    patterns: [...state.patterns],
+    code: buildCode(secScores, total, state.patterns),
+    notes: state.notes || '',
+    syms: [...state.syms], conds: [...state.conds], meds: [...state.meds],
+  };
+}
+
+__e.init = init; __e.loadVisit = loadVisit; __e.render = render;
+return __e;
+};
+
+__modules['ui-database.js'] = function(__e){
+/* ============================================================================
+   ui-database.js — patient registry, per-patient visit history, and a simple
+   progression chart. Also hosts Export / Import (the local-storage sync path:
+   export is stamped + import MERGES, so a colleague's file adds visits rather
+   than overwriting). Ported in spirit from v7's database mode.
+   ========================================================================== */
+
+const { severityOf, indexPct } = __req('scoring.js');
+const { SECTIONS, sectionMax } = __req('schema.js');
+const { el, esc, fmtDate, toast, dialogForm, dialogConfirm } = __req('util.js');
+
+let ctx;
+let view = { mode: 'list', patientId: null };
+
+function init(appCtx) { ctx = appCtx; }
+function showList() { view = { mode: 'list', patientId: null }; render(); }
+
+function render() {
+  const root = document.getElementById('mode-database');
+  root.innerHTML = '';
+  if (view.mode === 'detail') return renderDetail(root);
+  renderList(root);
+}
+
+function renderList(root) {
+  const bar = el('div', { class: 'db-toolbar' });
+  const search = el('input', { class: 'db-search', placeholder: 'Search patients…' });
+  search.oninput = () => filter(search.value.toLowerCase());
+  bar.appendChild(search);
+  bar.appendChild(el('button', { class: 'btn btn-g', onclick: newPatient }, '+ New patient'));
+  bar.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.setMode('patient') }, 'New questionnaire'));
+  bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.exportDB }, 'Export backup'));
+  bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.importDB }, 'Import / merge'));
+  root.appendChild(bar);
+
+  const grid = el('div', { class: 'db-grid', id: 'dbGrid' });
+  root.appendChild(grid);
+  paintCards(ctx.db.patients);
+
+  if (!ctx.db.patients.length) {
+    grid.innerHTML = '';
+    root.appendChild(el('div', { class: 'db-empty' }, '🌱<br>No patients yet. Start a questionnaire or add a patient.'));
+  }
+}
+
+function filter(q) {
+  const list = ctx.db.patients.filter(p => (p.name || '').toLowerCase().includes(q) || (p.ref || '').toLowerCase().includes(q));
+  paintCards(list);
+}
+
+function paintCards(list) {
+  const grid = document.getElementById('dbGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  list.forEach(p => {
+    const visits = p.visits || [];
+    const latest = visits[visits.length - 1];
+    const prev = visits[visits.length - 2];
+    const sev = latest ? severityOf(latest.total) : null;
+    let delta = '';
+    if (latest && prev) {
+      const d = latest.total - prev.total;
+      const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : 'delta-flat';
+      delta = `<span class="${cls}" style="font-weight:700;font-size:12px">${d < 0 ? '▼' : d > 0 ? '▲' : '='} ${Math.abs(d)}</span>`;
+    }
+    const card = el('div', { class: 'pt-card' });
+    card.appendChild(el('button', { class: 'pt-del', title: 'Delete', onclick: e => { e.stopPropagation(); deletePatient(p); } }, '✕'));
+    card.appendChild(el('div', { class: 'pt-top' },
+      `<div class="pt-av">${esc((p.name || '?').slice(0, 1).toUpperCase())}</div>
+       <div><div class="pt-name">${esc(p.name || 'Unnamed')}</div>
+       <div class="pt-meta">${p.ref ? 'Ref ' + esc(p.ref) + ' · ' : ''}${p.dob ? esc(p.dob) : ''}</div></div>`));
+    card.appendChild(el('div', { class: 'pt-stats' },
+      `<div class="pt-stat"><div class="v">${visits.length}</div><div class="l">Visits</div></div>
+       <div class="pt-stat"><div class="v">${latest ? indexPct(latest.total) + '%' : '—'}</div><div class="l">Latest index</div></div>
+       <div class="pt-stat"><div class="v" style="font-size:12px;color:${sev ? sev.color : '#999'}">${sev ? esc(sev.label) : '—'}</div><div class="l">${delta || 'Severity'}</div></div>`));
+    card.onclick = () => { view = { mode: 'detail', patientId: p.id }; render(); };
+    grid.appendChild(card);
+  });
+}
+
+async function newPatient() {
+  const r = await dialogForm('New patient', [
+    { key: 'name', label: 'Name', placeholder: 'Patient name' },
+    { key: 'ref', label: 'Reference / ID', placeholder: 'optional' },
+    { key: 'dob', label: 'Year of birth', placeholder: 'optional' },
+  ]);
+  if (!r || !r.name) return;
+  ctx.db.patients.push({ id: ctx.uid(), name: r.name, ref: r.ref, dob: r.dob, sex: '', notes: '', created: Date.now(), visits: [] });
+  ctx.persist(); render();
+}
+
+async function deletePatient(p) {
+  if (!(await dialogConfirm(`Delete ${p.name || 'this patient'} and all their visits? This cannot be undone.`, { title: 'Delete patient', okLabel: 'Delete', danger: true }))) return;
+  ctx.db.patients = ctx.db.patients.filter(x => x.id !== p.id);
+  ctx.persist(); render();
+}
+
+function renderDetail(root) {
+  const p = ctx.db.patients.find(x => x.id === view.patientId);
+  if (!p) { showList(); return; }
+  const head = el('div', { class: 'row', style: 'margin-bottom:14px' });
+  head.appendChild(el('button', { class: 'back-btn', onclick: showList }, '← All patients'));
+  head.appendChild(el('h1', { style: 'flex:1' }, esc(p.name || 'Unnamed') + (p.ref ? ` <small class="muted">Ref ${esc(p.ref)}</small>` : '')));
+  head.appendChild(el('button', { class: 'btn btn-o', onclick: () => { ctx.setActive(p.id); ctx.setMode('patient'); } }, '+ New questionnaire'));
+  root.appendChild(head);
+
+  const visits = (p.visits || []).slice().sort((a, b) => (a.date || 0) - (b.date || 0));
+  if (!visits.length) { root.appendChild(el('div', { class: 'db-empty' }, 'No visits yet for this patient.')); return; }
+
+  root.appendChild(progressionCard(visits));
+
+  visits.slice().reverse().forEach((v, idx) => {
+    const realIdx = visits.length - idx;
+    const sev = severityOf(v.total);
+    const prev = visits[visits.length - idx - 2];
+    let delta = '';
+    if (prev) { const d = v.total - prev.total; const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : 'delta-flat'; delta = `<span class="${cls}">${d < 0 ? '▼' : d > 0 ? '▲' : '='}${Math.abs(d)}</span>`; }
+    const card = el('div', { class: `visit-card${idx === 0 ? ' latest' : ''}` });
+    card.appendChild(el('div', { class: 'visit-num' }, String(realIdx)));
+    card.appendChild(el('div', { class: 'visit-info' },
+      `<div class="visit-date">${fmtDate(v.date)}</div><div class="visit-sub">${esc(v.source || '')} · <code>${esc(v.code || '')}</code></div>`));
+    card.appendChild(el('div', { class: 'visit-score' }, `<div class="v">${indexPct(v.total)}%</div><div class="l">Index</div>`));
+    card.appendChild(el('span', { class: 'pill ' + sev.cls }, esc(sev.label)));
+    if (delta) card.appendChild(el('div', { style: 'font-weight:700' }, delta));
+    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v) }, 'Open in clinician'));
+    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.printReport(v) }, 'Print'));
+    root.appendChild(card);
+  });
+}
+
+// Simple progression chart of the Dysbiosis Index across visits.
+function progressionCard(visits) {
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', {}, 'Progression'));
+  card.appendChild(el('div', { class: 'q-sub' }, 'Dysbiosis Index across visits (lower is better).'));
+  const W = 640, H = 200, pad = 30;
+  const pts = visits.map((v, i) => {
+    const x = pad + (visits.length === 1 ? (W - 2 * pad) / 2 : i * (W - 2 * pad) / (visits.length - 1));
+    const y = H - pad - (indexPct(v.total) / 100) * (H - 2 * pad);
+    return { x, y, v };
+  });
+  const path = pts.map((p, i) => (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="max-width:660px">`;
+  [0, 25, 50, 75, 100].forEach(g => {
+    const y = H - pad - g / 100 * (H - 2 * pad);
+    svg += `<line x1="${pad}" y1="${y}" x2="${W - pad}" y2="${y}" stroke="#eee"/><text x="4" y="${y + 3}" font-size="9" fill="#999">${g}%</text>`;
+  });
+  if (pts.length > 1) svg += `<path d="${path}" fill="none" stroke="#0F6E56" stroke-width="2"/>`;
+  pts.forEach(p => {
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${severityOf(p.v.total).color}"/>`;
+    svg += `<text x="${p.x}" y="${p.y - 9}" font-size="9" text-anchor="middle" fill="#555">${indexPct(p.v.total)}%</text>`;
+    svg += `<text x="${p.x}" y="${H - pad + 14}" font-size="8" text-anchor="middle" fill="#999">${fmtDate(p.v.date).replace(/ \d{4}$/, '')}</text>`;
+  });
+  svg += '</svg>';
+  card.appendChild(el('div', { class: 'prog-svg' }, svg));
+  return card;
+}
+
+__e.init = init; __e.showList = showList; __e.render = render;
+return __e;
+};
+
+__modules['ui-patient.js'] = function(__e){
+/* ============================================================================
+   ui-patient.js — the patient questionnaire surface. Renders straight from the
+   schema (one source), collects answers by question id + the validated
+   instruments, computes results via the shared scoring/pattern modules, and
+   hands a canonical visit record to the app for saving / clinician handoff.
+   ========================================================================== */
+
+const { SECTIONS, QUESTIONS, questionsOf, sectionMax } = __req('schema.js');
+const { scaleFor, BRISTOL_TYPES, PSS4_ITEMS, PSS4_ANCHORS, pss4Score, pss4Band, SLEEP_ITEMS, sleepScore, sleepBand, PAIN_REGIONS, painBand } = __req('scales.js');
+const { computeScores, buildCode } = __req('scoring.js');
+const { detectPatterns } = __req('patterns.js');
+const { el, esc, toast } = __req('util.js');
+
+let ctx;
+let answers = {};                          // id -> 0..3
+let extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+
+function init(appCtx) { ctx = appCtx; }
+
+function render() {
+  answers = {}; extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+  const root = document.getElementById('mode-patient');
+  root.innerHTML = '';
+  root.appendChild(el('div', { class: 'intro' },
+    `<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
+    `Your responses produce a Dysbiosis Index your clinician will review. This is an educational screening tool, not a diagnosis.`));
+
+  // Symptom sections
+  SECTIONS.forEach(sec => {
+    const card = el('div', { class: 'sec-card' });
+    card.appendChild(el('div', { class: 'sec-head', style: `background:${sec.color}` },
+      `${esc(sec.full)} <span style="opacity:.8;font-weight:500">${questionsOf(sec.id).length} items</span>`));
+    const body = el('div', { class: 'sec-body' });
+    questionsOf(sec.id).forEach(q => body.appendChild(questionRow(q)));
+    card.appendChild(body);
+    root.appendChild(card);
+  });
+
+  root.appendChild(bristolCard());
+  root.appendChild(instrumentCard('Stress (PSS-4)', PSS4_ITEMS, PSS4_ANCHORS, 'pss4'));
+  root.appendChild(sleepCard());
+  root.appendChild(painCard());
+
+  const actions = el('div', { class: 'card row', style: 'justify-content:flex-end' });
+  actions.appendChild(el('button', { class: 'btn btn-g', onclick: calc }, 'See results →'));
+  root.appendChild(actions);
+  root.appendChild(el('div', { id: 'patient-results' }));
+}
+
+function questionRow(q) {
+  const labels = scaleFor(q.scale);
+  const row = el('div', { class: 'q' });
+  row.appendChild(el('div', { class: 'q-txt' }, esc(q.patientText)));
+  if (q.patientSub) row.appendChild(el('div', { class: 'q-sub' }, esc(q.patientSub)));
+  const opts = el('div', { class: 'opts' });
+  labels.forEach((lab, v) => {
+    const b = el('button', { class: `opt s${v}`, dataset: { q: q.id, v }, type: 'button' },
+      `<span class="on">${v}</span>${esc(lab)}`);
+    b.onclick = () => {
+      answers[q.id] = v;
+      opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+      b.classList.add('sel');
+    };
+    opts.appendChild(b);
+  });
+  row.appendChild(opts);
+  return row;
+}
+
+function bristolCard() {
+  const card = el('div', { class: 'sec-card' });
+  card.appendChild(el('div', { class: 'sec-head', style: 'background:#6B4A2E' }, 'Stool type (Bristol scale)'));
+  const body = el('div', { class: 'sec-body' });
+  body.appendChild(el('div', { class: 'q-sub' }, 'Pick the type that best matches your usual stool.'));
+  const grid = el('div', { class: 'bristol-grid' });
+  BRISTOL_TYPES.forEach(t => {
+    const b = el('button', { class: 'bristol-opt', type: 'button' },
+      `<span class="bristol-n" style="background:${t.col}">${t.n}</span>
+       <span><b>${esc(t.label)}</b> · <span class="muted">${esc(t.sub)}</span><br><small style="color:${t.col}">${esc(t.tag)}</small></span>`);
+    b.onclick = () => { extras.bristol = t.n; grid.querySelectorAll('.bristol-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+  card.appendChild(body);
+  return card;
+}
+
+function instrumentCard(title, items, anchors, key) {
+  const card = el('div', { class: 'sec-card' });
+  card.appendChild(el('div', { class: 'sec-head', style: 'background:#534AB7' }, esc(title)));
+  const body = el('div', { class: 'sec-body' });
+  items.forEach((q, qi) => {
+    const row = el('div', { class: 'q' });
+    row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q)));
+    const opts = el('div', { class: 'opts' });
+    anchors.forEach((lab, v) => {
+      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      b.onclick = () => { extras[key][qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
+      opts.appendChild(b);
+    });
+    row.appendChild(opts);
+    body.appendChild(row);
+  });
+  card.appendChild(body);
+  return card;
+}
+
+function sleepCard() {
+  const card = el('div', { class: 'sec-card' });
+  card.appendChild(el('div', { class: 'sec-head', style: 'background:#185FA5' }, 'Sleep quality'));
+  const body = el('div', { class: 'sec-body' });
+  SLEEP_ITEMS.forEach((q, qi) => {
+    const row = el('div', { class: 'q' });
+    row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q.t)));
+    const opts = el('div', { class: 'opts' });
+    q.a.forEach((lab, v) => {
+      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      b.onclick = () => { extras.sleep[qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
+      opts.appendChild(b);
+    });
+    row.appendChild(opts);
+    body.appendChild(row);
+  });
+  card.appendChild(body);
+  return card;
+}
+
+function painCard() {
+  const card = el('div', { class: 'sec-card' });
+  card.appendChild(el('div', { class: 'sec-head', style: 'background:#A32D2D' }, 'Pain (optional)'));
+  const body = el('div', { class: 'sec-body' });
+  body.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, 'Current pain level (0 = none, 10 = worst)'));
+  const nrs = el('div', { class: 'nrs-row' });
+  const regWrap = el('div', { style: 'margin-top:10px' });
+  for (let v = 0; v <= 10; v++) {
+    const b = el('button', { class: 'nrs-opt', type: 'button' }, String(v));
+    b.onclick = () => {
+      extras.nrsPain = v; nrs.querySelectorAll('.nrs-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
+      regWrap.style.display = v > 0 ? 'block' : 'none';
+    };
+    nrs.appendChild(b);
+  }
+  body.appendChild(nrs);
+  regWrap.style.display = 'none';
+  regWrap.appendChild(el('div', { class: 'grp-label' }, 'Where?'));
+  const chips = el('div', { class: 'chips' });
+  PAIN_REGIONS.forEach(r => {
+    const b = el('button', { class: 'chip-opt', type: 'button' }, esc(r.label));
+    b.onclick = () => { extras.painRegion = r.id; chips.querySelectorAll('.chip-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
+    chips.appendChild(b);
+  });
+  regWrap.appendChild(chips);
+  body.appendChild(regWrap);
+  card.appendChild(body);
+  return card;
+}
+
+// Build the canonical visit record from current answers/extras.
+function buildVisit() {
+  const answerArr = QUESTIONS.map(q => answers[q.id] ?? 0);
+  const ps = pss4Score(extras.pss4);
+  const ss = sleepScore(extras.sleep);
+  const { secScores, bands, total } = computeScores(answerArr);
+  const detectExtras = { bristol: extras.bristol, pss4Score: ps, sleepScore: ss, nrsPain: extras.nrsPain, painRegion: extras.painRegion };
+  const fired = detectPatterns(secScores, answerArr, detectExtras);
+  const patternIds = fired.map(p => p.id);
+  return {
+    date: Date.now(), source: 'patient',
+    answers: answerArr,
+    extras: { ...extras, pss4Score: ps, sleepScore: ss },
+    secScores, bands, total,
+    severity: undefined, // set by recompute on save; results screen computes locally
+    patterns: patternIds,
+    code: buildCode(secScores, total, patternIds),
+    notes: '',
+    _detectExtras: detectExtras,
+  };
+}
+
+function calc() {
+  const answered = Object.keys(answers).length;
+  if (answered < QUESTIONS.length) {
+    toast(`${QUESTIONS.length - answered} question(s) left — unanswered count as 0.`);
+  }
+  const visit = buildVisit();
+  const { secScores, total } = visit;
+  const sv = computeScores(visit.answers).severity;
+  const fired = detectPatterns(secScores, visit.answers, visit._detectExtras);
+
+  const out = document.getElementById('patient-results');
+  out.innerHTML = '';
+
+  // Hero
+  const hero = el('div', { class: 'card' });
+  hero.appendChild(el('div', { class: 'hero' },
+    `<div><div class="big">${sv.index}%</div><div class="sub">Dysbiosis Index · raw ${total}/120</div></div>
+     <div style="flex:1;min-width:160px"><span class="pill ${sv.cls}">${esc(sv.label)} dysbiosis</span>
+     <div style="font-size:12px;color:var(--inks);margin-top:8px;line-height:1.5">${esc(sv.desc)}</div></div>`));
+  out.appendChild(hero);
+
+  // Section bars
+  const bars = el('div', { class: 'card' });
+  bars.appendChild(el('h2', {}, 'By domain'));
+  SECTIONS.forEach(s => {
+    const sc = secScores[s.id]; const max = sectionMax(s.id); const p = Math.round(sc / max * 100);
+    bars.appendChild(el('div', { class: 'bar-row' },
+      `<div class="bar-label"><span>${esc(s.full)}</span><span class="muted">${sc}/${max} · ${p}%</span></div>
+       <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${s.color}"></div></div>`));
+  });
+  out.appendChild(bars);
+
+  // Instruments
+  const ps = pss4Band(extras.pss4.every(v => v != null) ? pss4Score(extras.pss4) : null);
+  const sl = sleepBand(extras.sleep.every(v => v != null) ? sleepScore(extras.sleep) : null);
+  const pn = painBand(extras.nrsPain);
+  const driv = el('div', { class: 'card' });
+  driv.appendChild(el('h2', {}, 'Modifiable drivers'));
+  const dg = el('div', { class: 'drivers' });
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">Stress (PSS-4)</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">Sleep</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">Pain (NRS)</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv">${extras.bristol ?? '—'}</div><div class="dl">Bristol type</div>`));
+  driv.appendChild(dg);
+  out.appendChild(driv);
+
+  // Patterns (patient-facing wording)
+  if (fired.length) {
+    const pc = el('div', { class: 'card' });
+    pc.appendChild(el('h2', {}, 'Patterns to discuss with your clinician'));
+    fired.forEach(p => pc.appendChild(el('div', { class: 'pat-alert', style: `background:${p.bg};border-color:${p.border || p.color}` },
+      `<div class="pa-ic">${p.emoji}</div><div><div class="pa-title" style="color:${p.color}">${esc(p.label)}</div><div class="pa-desc">${esc(p.patientDesc)}</div></div>`)));
+    out.appendChild(pc);
+  }
+
+  // Actions
+  const acts = el('div', { class: 'card row', style: 'justify-content:flex-end' });
+  acts.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(buildVisit()) }, 'Open in clinician view'));
+  acts.appendChild(el('button', { class: 'btn btn-g', onclick: () => ctx.saveVisit(buildVisit()) }, 'Save to patient record'));
+  out.appendChild(acts);
+
+  out.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+}
+
+__e.init = init; __e.render = render;
+return __e;
+};
+
+__modules['util.js'] = function(__e){
+/* ============================================================================
+   util.js — tiny shared UI helpers: DOM, escaping, dates, toast, and an
+   iOS-safe in-page modal (replaces prompt/confirm). No framework.
+   ========================================================================== */
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function el(tag, attrs = {}, html) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v;
+    else if (k === 'dataset') Object.assign(n.dataset, v);
+    else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+    else if (v != null) n.setAttribute(k, v);
+  }
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return '—'; }
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── Modal: prompt / confirm / choice — all return Promises ──────────────────
+const overlay = () => $('#overlay');
+const dlgBox = () => $('#dlg');
+
+function openDlg(html) {
+  dlgBox().innerHTML = html;
+  overlay().classList.add('show');
+}
+function closeDlg() { overlay().classList.remove('show'); }
+
+function dialogPrompt(message, { title = '', value = '', placeholder = '', okLabel = 'OK' } = {}) {
+  return new Promise(resolve => {
+    openDlg(`
+      ${title ? `<div class="dlg-h">${esc(title)}</div>` : ''}
+      ${message ? `<div class="dlg-m">${esc(message)}</div>` : ''}
+      <div class="dlg-b"><input id="dlgIn" value="${esc(value)}" placeholder="${esc(placeholder)}"></div>
+      <div class="dlg-acts">
+        <button class="btn btn-gh" id="dlgCancel">Cancel</button>
+        <button class="btn btn-g" id="dlgOk">${esc(okLabel)}</button>
+      </div>`);
+    const input = $('#dlgIn');
+    input.focus(); input.select();
+    const done = v => { closeDlg(); resolve(v); };
+    $('#dlgOk').onclick = () => done(input.value);
+    $('#dlgCancel').onclick = () => done(null);
+    input.onkeydown = e => { if (e.key === 'Enter') done(input.value); };
+  });
+}
+
+function dialogConfirm(message, { title = '', okLabel = 'OK', danger = false } = {}) {
+  return new Promise(resolve => {
+    openDlg(`
+      ${title ? `<div class="dlg-h">${esc(title)}</div>` : ''}
+      <div class="dlg-m">${esc(message)}</div>
+      <div class="dlg-acts">
+        <button class="btn btn-gh" id="dlgCancel">Cancel</button>
+        <button class="btn ${danger ? 'btn-re' : 'btn-g'}" id="dlgOk">${esc(okLabel)}</button>
+      </div>`);
+    $('#dlgOk').onclick = () => { closeDlg(); resolve(true); };
+    $('#dlgCancel').onclick = () => { closeDlg(); resolve(false); };
+  });
+}
+
+// fields: [{key,label,value,placeholder}] -> resolves object or null
+function dialogForm(title, fields, { okLabel = 'Save' } = {}) {
+  return new Promise(resolve => {
+    openDlg(`
+      <div class="dlg-h">${esc(title)}</div>
+      <div class="dlg-b">${fields.map(f =>
+        `<label style="font-size:11px;font-weight:600;color:var(--inkt)">${esc(f.label)}</label>
+         <input data-key="${esc(f.key)}" value="${esc(f.value || '')}" placeholder="${esc(f.placeholder || '')}">`).join('')}
+      </div>
+      <div class="dlg-acts">
+        <button class="btn btn-gh" id="dlgCancel">Cancel</button>
+        <button class="btn btn-g" id="dlgOk">${esc(okLabel)}</button>
+      </div>`);
+    const get = () => {
+      const o = {};
+      $$('#dlg input[data-key]').forEach(i => { o[i.dataset.key] = i.value.trim(); });
+      return o;
+    };
+    $('#dlgOk').onclick = () => { closeDlg(); resolve(get()); };
+    $('#dlgCancel').onclick = () => { closeDlg(); resolve(null); };
+  });
+}
+
+__e.$ = $; __e.$$ = $$; __e.el = el; __e.esc = esc; __e.fmtDate = fmtDate; __e.toast = toast; __e.dialogPrompt = dialogPrompt; __e.dialogConfirm = dialogConfirm; __e.dialogForm = dialogForm;
+return __e;
+};
+__req('app.js'); // boot
+</script>
+</body>
+</html>

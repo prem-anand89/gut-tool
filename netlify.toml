@@ -1,0 +1,17 @@
+# Netlify static-site config. No build step — the app is plain ES modules.
+# Publishing the repo root serves index.html + /js + /css directly.
+[build]
+  publish = "."
+  command = ""
+
+# Correct MIME type for ES modules (most relevant on older setups).
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+# SPA-ish fallback (single page; harmless if unused).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

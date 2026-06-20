@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F6E56">
+<title>Beyond Mechanics · Gut Health Suite</title>
+<link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+
+<header class="app-bar">
+  <div class="app-logo"><span class="dot"></span>Beyond Mechanics <span class="app-sub">Gut Suite</span></div>
+  <div class="app-spacer"></div>
+  <div class="mode-switch" id="modeSwitch">
+    <button class="mode-btn" data-mode="patient">Patient</button>
+    <button class="mode-btn" data-mode="clinician">Clinician</button>
+    <button class="mode-btn active" data-mode="database">Patients</button>
+  </div>
+  <div class="app-chip empty" id="activeChip" style="display:none">
+    <span class="nm" id="activeName"></span>
+    <button class="x" id="activeClear" title="Close patient">✕</button>
+  </div>
+</header>
+
+<main>
+  <section class="mode" id="mode-patient"></section>
+  <section class="mode" id="mode-clinician"></section>
+  <section class="mode show" id="mode-database"></section>
+</main>
+
+<!-- print target -->
+<div id="report"></div>
+
+<!-- toast + modal -->
+<div class="toast" id="toast"></div>
+<div class="ov" id="overlay"><div class="dlg" id="dlg"></div></div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
