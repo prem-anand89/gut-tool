@@ -43,6 +43,40 @@ function renderList(root) {
     grid.innerHTML = '';
     root.appendChild(el('div', { class: 'db-empty' }, '🌱<br>No patients yet. Start a questionnaire or add a patient.'));
   }
+
+  renderTrash(root);
+}
+
+function renderTrash(root) {
+  const t = ctx.db.trash || {};
+  const patients = t.patients || [];
+  const visits   = t.visits   || [];
+  if (!patients.length && !visits.length) return;
+
+  const section = el('div', { class: 'card', style: 'margin-top:20px;opacity:.85' });
+  const hrow = el('div', { class: 'row', style: 'align-items:center;margin-bottom:8px' });
+  hrow.appendChild(el('h3', { style: 'flex:1;margin:0' }, `🗑 Trash (${patients.length + visits.length} item${patients.length + visits.length !== 1 ? 's' : ''} · auto-deleted after 30 days)`));
+  hrow.appendChild(el('button', { class: 'btn btn-gh', style: 'color:var(--re,#A32D2D)', onclick: emptyTrash }, 'Empty trash'));
+  section.appendChild(hrow);
+
+  patients.forEach(p => {
+    const row = el('div', { style: 'display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f0f0f0;font-size:13px' });
+    const daysLeft = Math.ceil((30 * 86400000 - (Date.now() - (p.deletedAt || 0))) / 86400000);
+    row.appendChild(el('span', { style: 'flex:1' }, `👤 ${esc(p.name || 'Unnamed')} · ${(p.visits || []).length} visits · ${daysLeft}d left`));
+    row.appendChild(el('button', { class: 'btn btn-gh', onclick: () => restorePatient(p) }, 'Restore'));
+    section.appendChild(row);
+  });
+
+  visits.forEach(tv => {
+    const row = el('div', { style: 'display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f0f0f0;font-size:13px' });
+    const daysLeft = Math.ceil((30 * 86400000 - (Date.now() - (tv.deletedAt || 0))) / 86400000);
+    const who = tv.patientName || 'Unknown patient';
+    row.appendChild(el('span', { style: 'flex:1' }, `📋 Visit · ${esc(who)} · ${fmtDate(tv.date)} · ${daysLeft}d left`));
+    row.appendChild(el('button', { class: 'btn btn-gh', onclick: () => restoreVisit(tv) }, 'Restore'));
+    section.appendChild(row);
+  });
+
+  root.appendChild(section);
 }
 
 function filter(q) {
@@ -91,18 +125,69 @@ async function newPatient() {
   ctx.persist(); render();
 }
 
+// ── Soft-delete helpers (move to trash, 30-day auto-purge) ──────────────────
+
+function ensureTrash() {
+  if (!ctx.db.trash) ctx.db.trash = { patients: [], visits: [] };
+}
+
 async function deleteVisit(p, v) {
   const when = fmtDate(v.date);
-  if (!(await dialogConfirm(`Delete the visit from ${when}? This cannot be undone.`, { title: 'Delete visit', okLabel: 'Delete', danger: true }))) return;
+  if (!(await dialogConfirm(
+    `Move the visit from ${when} to trash?\n\nIt will be permanently deleted after 30 days.`,
+    { title: 'Move to trash', okLabel: 'Move to trash', danger: true }))) return;
+  ensureTrash();
+  ctx.db.trash.visits.push({ ...v, deletedAt: Date.now(), patientId: p.id, patientName: p.name || '' });
   p.visits = (p.visits || []).filter(x => x.id !== v.id);
   ctx.persist(); render();
-  toast('Visit deleted');
+  toast('Visit moved to trash · restores within 30 days');
 }
 
 async function deletePatient(p) {
-  if (!(await dialogConfirm(`Delete ${p.name || 'this patient'} and all their visits? This cannot be undone.`, { title: 'Delete patient', okLabel: 'Delete', danger: true }))) return;
+  if (!(await dialogConfirm(
+    `Move ${p.name || 'this patient'} and all their visits to trash?\n\nPermanently deleted after 30 days.`,
+    { title: 'Move to trash', okLabel: 'Move to trash', danger: true }))) return;
+  ensureTrash();
+  ctx.db.trash.patients.push({ ...p, deletedAt: Date.now() });
   ctx.db.patients = ctx.db.patients.filter(x => x.id !== p.id);
   ctx.persist(); render();
+  toast('Patient moved to trash · restores within 30 days');
+}
+
+function restorePatient(p) {
+  ensureTrash();
+  const { deletedAt, ...patient } = p;
+  ctx.db.patients.push(patient);
+  ctx.db.trash.patients = ctx.db.trash.patients.filter(x => x.id !== p.id);
+  ctx.persist(); render();
+  toast(`${p.name || 'Patient'} restored`);
+}
+
+function restoreVisit(tv) {
+  ensureTrash();
+  const { deletedAt, patientId, patientName, ...visit } = tv;
+  const patient = ctx.db.patients.find(x => x.id === patientId);
+  if (!patient) { toast('Original patient no longer exists — cannot restore visit'); return; }
+  if (!(patient.visits || []).find(v => v.id === visit.id)) {
+    patient.visits = patient.visits || [];
+    patient.visits.push(visit);
+    patient.visits.sort((a, b) => (a.date || 0) - (b.date || 0));
+  }
+  ctx.db.trash.visits = ctx.db.trash.visits.filter(x => x.id !== visit.id);
+  ctx.persist(); render();
+  toast('Visit restored');
+}
+
+async function emptyTrash() {
+  const t = ctx.db.trash || { patients: [], visits: [] };
+  const total = (t.patients || []).length + (t.visits || []).length;
+  if (!total) { toast('Trash is empty'); return; }
+  if (!(await dialogConfirm(
+    `Permanently delete ${total} item(s) from trash? This cannot be undone.`,
+    { title: 'Empty trash', okLabel: 'Empty trash', danger: true }))) return;
+  ctx.db.trash = { patients: [], visits: [] };
+  ctx.persist(); render();
+  toast('Trash emptied');
 }
 
 function renderDetail(root) {

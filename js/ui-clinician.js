@@ -132,6 +132,20 @@ function leftColumn() {
   });
   col.appendChild(sl);
 
+  // Override note — shown only when a questionnaire is loaded, to make it
+  // unmistakably clear that every item below can be freely edited.
+  if (state.rawAnswers) {
+    const note = el('div', { class: 'card', style: 'background:#f0f7f4;border:1px solid #b2d8cc;font-size:12px;color:#0F5040;padding:10px 14px' });
+    const nr = el('div', { style: 'display:flex;align-items:center;gap:8px' });
+    nr.appendChild(el('span', {}, '✏️ <b>Clinician override mode</b> — items marked <span class="tag-intake">from intake</span> were auto-detected from patient answers. You can check or uncheck <i>any</i> item below to override. Patterns and strain ranking update instantly.'));
+    if (state.rawAnswers) {
+      const resetBtn = el('button', { class: 'btn btn-gh', style: 'white-space:nowrap;font-size:11px', onclick: resetToIntake }, 'Reset to intake');
+      nr.appendChild(resetBtn);
+    }
+    note.appendChild(nr);
+    col.appendChild(note);
+  }
+
   // Symptom checkboxes
   const symCard = el('div', { class: 'card' });
   symCard.appendChild(el('h3', {}, 'Symptoms'));
@@ -171,13 +185,29 @@ function leftColumn() {
 function checkbox(id, label, set) {
   const on = set.has(id);
   const fromIntake = state.fromIntake.has(id);
+  // "from intake" = auto-detected but still fully editable — the tag is
+  // informational only. Clinician can check/uncheck freely.
+  const intakeTag = fromIntake ? ' <span class="tag-intake" title="Auto-detected from patient answers — click to override">from intake ✏️</span>' : '';
   const lab = el('label', { class: `cb${on ? ' active' : ''}` });
   const cbx = el('input', { type: 'checkbox' });
   cbx.checked = on;
   cbx.onchange = () => { cbx.checked ? set.add(id) : set.delete(id); recompute(); render(); };
   lab.appendChild(cbx);
-  lab.appendChild(el('span', {}, esc(label) + (fromIntake ? ' <span class="tag-intake">from intake</span>' : '')));
+  lab.appendChild(el('span', {}, esc(label) + intakeTag));
   return lab;
+}
+
+// Re-derive symptoms and meds from the original patient answers, discarding
+// any manual overrides the clinician has made. Conditions are left as-is
+// (they are never auto-derived from intake, only manually entered).
+function resetToIntake() {
+  if (!state.rawAnswers) return;
+  const d = deriveClinicianFlags(state.rawAnswers, state.extras);
+  state.syms = d.syms;
+  state.meds = d.meds;
+  state.fromIntake = d.fromIntake;
+  recompute(); render();
+  toast('Reset to intake-derived flags');
 }
 
 // Recompute fired patterns from current state.

@@ -16,6 +16,8 @@ import { printReport } from './report.js';
 const App = {
   db: loadDB(),
   mode: 'database',
+  // Always mutate via ctx.setActive() — direct writes skip the cross-patient
+  // reset guard that clears in-progress questionnaire/clinician answers.
   activeId: null,
 };
 

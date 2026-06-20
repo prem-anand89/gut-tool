@@ -30,7 +30,24 @@ const KEY = 'beyondmechanicsgutdb';
 const LEGACY_REMOVE_42 = [34, 21];
 
 export function blankDB() {
-  return { patients: [], meta: { schemaVersion: SCHEMA_VERSION, remindEvery: 5, visitsSinceExport: 0 } };
+  return {
+    patients: [],
+    // Soft-delete: items moved here instead of erased. Purged after TRASH_TTL_MS.
+    trash: { patients: [], visits: [] },
+    meta: { schemaVersion: SCHEMA_VERSION, remindEvery: 5, visitsSinceExport: 0 },
+  };
+}
+
+const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Remove trash items older than 30 days. Called on every load + save.
+export function purgeTrash(db) {
+  const cutoff = Date.now() - TRASH_TTL_MS;
+  if (db.trash) {
+    db.trash.patients = (db.trash.patients || []).filter(p => (p.deletedAt || 0) > cutoff);
+    db.trash.visits   = (db.trash.visits   || []).filter(v => (v.deletedAt || 0) > cutoff);
+  }
+  return db;
 }
 
 // ── load / save ─────────────────────────────────────────────────────────────
@@ -46,6 +63,8 @@ export function loadDB() {
 export function saveDB(db) {
   db.meta = db.meta || {};
   db.meta.schemaVersion = SCHEMA_VERSION;
+  if (!db.trash) db.trash = { patients: [], visits: [] };
+  purgeTrash(db);
   try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {
     console.warn('[BM storage] save failed', e);
   }
@@ -114,7 +133,13 @@ export function migrateDB(db) {
       return recomputeVisit(v);
     }),
   }));
-  return { patients, meta: { ...blankDB().meta, ...(db.meta || {}), schemaVersion: SCHEMA_VERSION } };
+  const migrated = {
+    patients,
+    trash: db.trash || { patients: [], visits: [] },
+    meta: { ...blankDB().meta, ...(db.meta || {}), schemaVersion: SCHEMA_VERSION },
+  };
+  purgeTrash(migrated);
+  return migrated;
 }
 
 /* ── EXPORT ──────────────────────────────────────────────────────────────────
@@ -123,6 +148,9 @@ export function migrateDB(db) {
 export function exportDB(db, deviceLabel) {
   const payload = {
     ...db,
+    // Export only active patients; trash is device-local and not merged across
+    // devices — avoids re-importing items the other device intentionally deleted.
+    trash: { patients: [], visits: [] },
     meta: {
       ...(db.meta || {}),
       schemaVersion: SCHEMA_VERSION,
