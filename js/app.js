@@ -26,7 +26,13 @@ const ctx = {
   persist() { saveDB(App.db); },
   setMode,
   activePatient: () => App.db.patients.find(p => p.id === App.activeId) || null,
-  setActive(id) { App.activeId = id; updateChip(); },
+  setActive(id) {
+    // Switching the active patient outside an explicit New/Edit flow must clear
+    // any in-progress questionnaire/clinician answers, so they can't be saved
+    // against the newly-selected patient.
+    if (id !== App.activeId) { Patient.reset(); Clinician.reset(); }
+    App.activeId = id; updateChip();
+  },
   saveVisit,
   openClinicianWithVisit,
   newQuestionnaire,
@@ -204,7 +210,11 @@ function maybeRemindExport() {
 function boot() {
   Patient.init(ctx); Clinician.init(ctx); Database.init(ctx);
   $('#modeSwitch').addEventListener('click', e => { const b = e.target.closest('.mode-btn'); if (b) setMode(b.dataset.mode); });
-  $('#activeClear').addEventListener('click', () => { App.activeId = null; updateChip(); if (App.mode === 'database') refresh(); });
+  $('#activeClear').addEventListener('click', () => {
+    // Closing the active patient also discards any in-progress answers.
+    Patient.reset(); Clinician.reset();
+    App.activeId = null; updateChip(); refresh();
+  });
   ctx.persist(); // persist any migration that happened on load
   setMode('database');
 }

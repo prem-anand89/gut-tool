@@ -33,6 +33,10 @@ function blankState() {
 
 export function init(appCtx) { ctx = appCtx; if (!state) state = blankState(); }
 
+// Clear any in-progress clinician state (used when the active patient changes
+// outside an explicit load flow, so stale answers can't follow a new patient).
+export function reset() { state = blankState(); }
+
 // Approx per-section score from a 0–3 band when exact secScores absent.
 const approx = (band, max) => Math.round(band / 3 * max);
 function domainScore(id) {

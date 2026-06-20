@@ -280,7 +280,13 @@ const ctx = {
   persist() { saveDB(App.db); },
   setMode,
   activePatient: () => App.db.patients.find(p => p.id === App.activeId) || null,
-  setActive(id) { App.activeId = id; updateChip(); },
+  setActive(id) {
+    // Switching the active patient outside an explicit New/Edit flow must clear
+    // any in-progress questionnaire/clinician answers, so they can't be saved
+    // against the newly-selected patient.
+    if (id !== App.activeId) { Patient.reset(); Clinician.reset(); }
+    App.activeId = id; updateChip();
+  },
   saveVisit,
   openClinicianWithVisit,
   newQuestionnaire,
@@ -458,7 +464,11 @@ function maybeRemindExport() {
 function boot() {
   Patient.init(ctx); Clinician.init(ctx); Database.init(ctx);
   $('#modeSwitch').addEventListener('click', e => { const b = e.target.closest('.mode-btn'); if (b) setMode(b.dataset.mode); });
-  $('#activeClear').addEventListener('click', () => { App.activeId = null; updateChip(); if (App.mode === 'database') refresh(); });
+  $('#activeClear').addEventListener('click', () => {
+    // Closing the active patient also discards any in-progress answers.
+    Patient.reset(); Clinician.reset();
+    App.activeId = null; updateChip(); refresh();
+  });
   ctx.persist(); // persist any migration that happened on load
   setMode('database');
 }
@@ -1874,6 +1884,10 @@ function blankState() {
 
 function init(appCtx) { ctx = appCtx; if (!state) state = blankState(); }
 
+// Clear any in-progress clinician state (used when the active patient changes
+// outside an explicit load flow, so stale answers can't follow a new patient).
+function reset() { state = blankState(); }
+
 // Approx per-section score from a 0–3 band when exact secScores absent.
 const approx = (band, max) => Math.round(band / 3 * max);
 function domainScore(id) {
@@ -2201,7 +2215,7 @@ function buildSnapshot() {
   };
 }
 
-__e.init = init; __e.loadVisit = loadVisit; __e.render = render;
+__e.init = init; __e.reset = reset; __e.loadVisit = loadVisit; __e.render = render;
 return __e;
 };
 
