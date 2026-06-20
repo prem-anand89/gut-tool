@@ -104,3 +104,21 @@ export function painBand(s) {
     : s <= 6 ? { l: 'Moderate', c: '#BA7517' }
     : { l: 'Severe', c: '#A32D2D' };
 }
+
+// ── MODIFIABLE FACTORS — ONE shared descriptor used by every surface ─────────
+// Returns the four modifiable drivers with a heading (name), an intensity/type
+// band, the raw score (e.g. 11/16), and a colour. Single source so the patient
+// results, clinician card, visit cards and print report can never disagree.
+export function modifiableFactors(extras) {
+  const ex = extras || {};
+  const ps = pss4Band(ex.pss4Score ?? null);
+  const sl = sleepBand(ex.sleepScore ?? null);
+  const pn = painBand(ex.nrsPain ?? null);
+  const bt = ex.bristol != null ? BRISTOL_TYPES.find(t => t.n === ex.bristol) : null;
+  return [
+    { icon: '🧠', label: 'Stress (PSS-4)', band: ps ? ps.l : '—', score: ex.pss4Score != null ? `${ex.pss4Score}/16` : null, color: ps ? ps.c : '#999' },
+    { icon: '😴', label: 'Sleep (Sleep-4)', band: sl ? sl.l : '—', score: ex.sleepScore != null ? `${ex.sleepScore}/12` : null, color: sl ? sl.c : '#999' },
+    { icon: '⚡', label: 'Pain (NRS)', band: pn ? pn.l : '—', score: ex.nrsPain != null ? `${ex.nrsPain}/10` : null, color: pn ? pn.c : '#999' },
+    { icon: '💩', label: 'Bristol stool', band: bt ? `Type ${bt.n}` : '—', score: bt ? bt.tag : null, color: bt ? bt.col : '#999' },
+  ];
+}

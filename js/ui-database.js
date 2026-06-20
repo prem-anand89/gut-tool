@@ -7,7 +7,7 @@
 
 import { severityOf, indexPct } from './scoring.js';
 import { SECTIONS, sectionMax } from './schema.js';
-import { pss4Band, sleepBand, painBand } from './scales.js';
+import { modifiableFactors } from './scales.js';
 import { PATTERNS } from './patterns.js';
 import { el, esc, fmtDate, toast, dialogForm, dialogConfirm } from './util.js';
 
@@ -91,6 +91,14 @@ async function newPatient() {
   ctx.persist(); render();
 }
 
+async function deleteVisit(p, v) {
+  const when = fmtDate(v.date);
+  if (!(await dialogConfirm(`Delete the visit from ${when}? This cannot be undone.`, { title: 'Delete visit', okLabel: 'Delete', danger: true }))) return;
+  p.visits = (p.visits || []).filter(x => x.id !== v.id);
+  ctx.persist(); render();
+  toast('Visit deleted');
+}
+
 async function deletePatient(p) {
   if (!(await dialogConfirm(`Delete ${p.name || 'this patient'} and all their visits? This cannot be undone.`, { title: 'Delete patient', okLabel: 'Delete', danger: true }))) return;
   ctx.db.patients = ctx.db.patients.filter(x => x.id !== p.id);
@@ -103,6 +111,7 @@ function renderDetail(root) {
   const head = el('div', { class: 'row', style: 'margin-bottom:14px' });
   head.appendChild(el('button', { class: 'back-btn', onclick: showList }, '← All patients'));
   head.appendChild(el('h1', { style: 'flex:1' }, esc(p.name || 'Unnamed') + (p.ref ? ` <small class="muted">Ref ${esc(p.ref)}</small>` : '')));
+  head.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.exportPatient(p) }, 'Export patient'));
   head.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.newQuestionnaire(p.id) }, '+ New questionnaire'));
   root.appendChild(head);
 
@@ -117,11 +126,8 @@ function renderDetail(root) {
     const prev = visits[visits.length - idx - 2];
     let delta = '';
     if (prev) { const d = v.total - prev.total; const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : 'delta-flat'; delta = `<span class="${cls}">${d < 0 ? '▼' : d > 0 ? '▲' : '='}${Math.abs(d)}</span>`; }
-    const ex = v.extras || {};
-    const ps = pss4Band(ex.pss4Score ?? null);
-    const sl = sleepBand(ex.sleepScore ?? null);
-    const pn = painBand(ex.nrsPain ?? null);
-    const factors = `🧠 ${ps ? ps.l : '—'} · 😴 ${sl ? sl.l : '—'} · ⚡ ${pn ? pn.l : '—'} · 🫙 ${ex.bristol != null ? 'Type ' + ex.bristol : '—'}`;
+    const factors = modifiableFactors(v.extras)
+      .map(f => `${f.icon} ${esc(f.band)}${f.score ? ' ' + esc(f.score) : ''}`).join(' · ');
 
     const card = el('div', { class: `visit-card${idx === 0 ? ' latest' : ''}` });
     card.appendChild(el('div', { class: 'visit-num' }, String(realIdx)));
@@ -136,6 +142,7 @@ function renderDetail(root) {
     if (v.answers) card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.editVisit(v, p.id) }, 'Edit answers'));
     card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v, p.id) }, 'Open in clinician'));
     card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.printReport(v) }, 'Print'));
+    card.appendChild(el('button', { class: 'btn btn-gh', style: 'color:var(--re,#A32D2D)', onclick: () => deleteVisit(p, v) }, 'Delete'));
     root.appendChild(card);
   });
 }

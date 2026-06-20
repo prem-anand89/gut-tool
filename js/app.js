@@ -33,6 +33,7 @@ const ctx = {
   editVisit,
   printReport: (visit) => printReport(visit, ctx.activePatient()),
   exportDB,
+  exportPatient,
   importDB,
   refresh,
 };
@@ -152,6 +153,22 @@ async function exportDB() {
   URL.revokeObjectURL(url);
   App.db.meta.visitsSinceExport = 0; ctx.persist();
   toast('Backup exported');
+}
+
+// ── Export a single patient (importable — merges back as one patient) ────────
+function exportPatient(patient) {
+  if (!patient) return;
+  const label = App.db.meta.deviceLabel || 'device';
+  // Serialize a one-patient DB so the file imports/merges cleanly elsewhere.
+  const oneDb = { ...App.db, patients: [patient] };
+  const json = serializeDB(oneDb, label);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const safe = (patient.name || 'patient').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+  const a = el('a', { href: url, download: `bmgut_${safe}_${new Date().toISOString().slice(0, 10)}.json` });
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${patient.name || 'patient'}`);
 }
 
 // ── Import (MERGE) ──────────────────────────────────────────────────────────

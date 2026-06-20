@@ -7,10 +7,10 @@
 
 import { SECTIONS, QUESTIONS, questionsOf, sectionMax } from './schema.js';
 import { scaleFor, BRISTOL_TYPES, PSS4_ITEMS, PSS4_ANCHORS, pss4Score, pss4Band,
-         SLEEP_ITEMS, sleepScore, sleepBand, PAIN_REGIONS, painBand } from './scales.js';
+         SLEEP_ITEMS, sleepScore, sleepBand, PAIN_REGIONS, painBand, modifiableFactors } from './scales.js';
 import { computeScores, buildCode } from './scoring.js';
 import { detectPatterns } from './patterns.js';
-import { el, esc, toast } from './util.js';
+import { el, esc, toast, fmtDate } from './util.js';
 
 let ctx;
 let answers = {};                          // id -> 0..3
@@ -51,8 +51,15 @@ export function render() {
   const root = document.getElementById('mode-patient');
   root.innerHTML = '';
   const p = ctx.activePatient && ctx.activePatient();
+  let editTag = '';
+  if (editingVisit) {
+    const vis = (p && p.visits) ? p.visits.slice().sort((a, b) => (a.date || 0) - (b.date || 0)) : [];
+    const num = vis.findIndex(v => v.id === editingVisit.id) + 1;
+    const when = editingVisit.date ? fmtDate(editingVisit.date) : '';
+    editTag = ` · <span style="color:var(--am);font-weight:700">editing visit ${num > 0 ? '#' + num : ''}${when ? ' · ' + esc(when) : ''}</span>`;
+  }
   const who = p
-    ? `<b>Patient:</b> ${esc(p.name || 'Patient')}${editingVisit ? ' · <span style="color:var(--am);font-weight:700">editing a saved visit</span>' : ''}<br>`
+    ? `<b>Patient:</b> ${esc(p.name || 'Patient')}${editTag}<br>`
     : '';
   root.appendChild(el('div', { class: 'intro' },
     `${who}<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
@@ -259,17 +266,17 @@ function calc() {
   });
   out.appendChild(bars);
 
-  // Instruments
-  const ps = pss4Band(extras.pss4.every(v => v != null) ? pss4Score(extras.pss4) : null);
-  const sl = sleepBand(extras.sleep.every(v => v != null) ? sleepScore(extras.sleep) : null);
-  const pn = painBand(extras.nrsPain);
+  // Instruments — single shared descriptor (heading + intensity/type + score).
+  const pss = extras.pss4.every(v => v != null) ? pss4Score(extras.pss4) : null;
+  const sls = extras.sleep.every(v => v != null) ? sleepScore(extras.sleep) : null;
   const driv = el('div', { class: 'card' });
   driv.appendChild(el('h2', {}, 'Modifiable drivers'));
   const dg = el('div', { class: 'drivers' });
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">🧠 Stress (PSS-4)</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">😴 Sleep (Sleep-4)</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">⚡ Pain (NRS)</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv">${extras.bristol != null ? 'Type ' + extras.bristol : '—'}</div><div class="dl">🫙 Bristol stool</div>`));
+  modifiableFactors({ pss4Score: pss, sleepScore: sls, nrsPain: extras.nrsPain, bristol: extras.bristol })
+    .forEach(f => dg.appendChild(el('div', { class: 'driver' },
+      `<div class="dl" style="font-weight:600;margin-bottom:2px">${f.icon} ${esc(f.label)}</div>
+       <div class="dv" style="color:${f.color}">${esc(f.band)}</div>
+       ${f.score ? `<div class="dl">${esc(f.score)}</div>` : ''}`)));
   driv.appendChild(dg);
   out.appendChild(driv);
 

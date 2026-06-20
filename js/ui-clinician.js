@@ -14,8 +14,8 @@ import { detectPatterns, PATTERNS, patternById } from './patterns.js';
 import { rankStrains } from './strains.js';
 import { LAB_TESTS, AVAIL_LABELS, relevantLabs } from './labs.js';
 import { SYM_GROUPS, CONDITIONS, MEDS, deriveClinicianFlags } from './clinician-derive.js';
-import { pss4Band, sleepBand, painBand } from './scales.js';
-import { el, esc, toast } from './util.js';
+import { modifiableFactors } from './scales.js';
+import { el, esc, toast, fmtDate } from './util.js';
 
 let ctx;
 let state;
@@ -69,8 +69,15 @@ export function render() {
   root.innerHTML = '';
 
   const p = ctx.activePatient && ctx.activePatient();
+  let editTag = '';
+  if (state.editingId && p && p.visits) {
+    const vis = p.visits.slice().sort((a, b) => (a.date || 0) - (b.date || 0));
+    const num = vis.findIndex(v => v.id === state.editingId) + 1;
+    const when = state.editingDate ? fmtDate(state.editingDate) : '';
+    if (num > 0) editTag = ` · <span style="color:var(--am);font-weight:700">visit #${num}${when ? ' · ' + esc(when) : ''}</span>`;
+  }
   root.appendChild(el('div', { class: 'gate-note' },
-    `${p ? `<b>Patient:</b> ${esc(p.name || 'Patient')}<br>` : ''}` +
+    `${p ? `<b>Patient:</b> ${esc(p.name || 'Patient')}${editTag}<br>` : ''}` +
     `<b>Clinician view — for physician co-management.</b> Protocols below include prescription-only agents (Rifaximin, etc.) ` +
     `and drug-interaction calls. This is decision-support for review by a prescribing clinician before anything reaches a patient — not patient-facing instructions.`));
 
@@ -239,17 +246,13 @@ function scoreSummary() {
 }
 
 function driversCard() {
-  const ex = state.extras || {};
-  const ps = pss4Band(ex.pss4Score ?? null);
-  const sl = sleepBand(ex.sleepScore ?? null);
-  const pn = painBand(ex.nrsPain ?? null);
   const card = el('div', { class: 'card' });
   card.appendChild(el('h3', {}, 'Modifiable drivers'));
   const g = el('div', { class: 'drivers', style: 'margin-top:8px' });
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">🧠 Stress (PSS-4)</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">😴 Sleep (Sleep-4)</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">⚡ Pain (NRS)</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv">${ex.bristol != null ? 'Type ' + ex.bristol : '—'}</div><div class="dl">🫙 Bristol stool</div>`));
+  modifiableFactors(state.extras).forEach(f => g.appendChild(el('div', { class: 'driver' },
+    `<div class="dl" style="font-weight:600;margin-bottom:2px">${f.icon} ${esc(f.label)}</div>
+     <div class="dv" style="color:${f.color}">${esc(f.band)}</div>
+     ${f.score ? `<div class="dl">${esc(f.score)}</div>` : ''}`)));
   card.appendChild(g);
   return card;
 }

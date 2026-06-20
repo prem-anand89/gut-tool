@@ -10,7 +10,7 @@ import { severityOf, indexPct } from './scoring.js';
 import { patternById } from './patterns.js';
 import { rankStrains } from './strains.js';
 import { deriveClinicianFlags } from './clinician-derive.js';
-import { pss4Band, sleepBand, painBand } from './scales.js';
+import { modifiableFactors } from './scales.js';
 import { esc, fmtDate } from './util.js';
 
 export function printReport(visit, patient) {
@@ -54,20 +54,11 @@ export function printReport(visit, patient) {
     </div>`).join('') : '<div style="font-size:9pt;color:#777">No specific patterns flagged at this visit.</div>';
 
   // Modifiable drivers (stress / sleep / pain / stool) from the visit's extras.
-  const ex = visit.extras || {};
-  const ps = pss4Band(ex.pss4Score ?? null);
-  const sl = sleepBand(ex.sleepScore ?? null);
-  const pn = painBand(ex.nrsPain ?? null);
-  const driverDefs = [
-    ['🧠 Stress (PSS-4)', ps ? ps.l : '—', ps ? ps.c : '#999'],
-    ['😴 Sleep (Sleep-4)', sl ? sl.l : '—', sl ? sl.c : '#999'],
-    ['⚡ Pain (NRS)', pn ? pn.l : '—', pn ? pn.c : '#999'],
-    ['🫙 Bristol stool', ex.bristol != null ? ('Type ' + ex.bristol) : '—', '#15140f'],
-  ];
-  const driverCards = driverDefs.map(([label, val, color]) => `
+  const driverCards = modifiableFactors(visit.extras).map(f => `
     <div style="flex:1;min-width:110px;border:1px solid #e0ddd6;border-radius:6px;padding:8px 10px;text-align:center">
-      <div style="font-size:11pt;font-weight:700;color:${color}">${esc(val)}</div>
-      <div style="font-size:7.5pt;color:#777;margin-top:2px">${esc(label)}</div>
+      <div style="font-size:7.5pt;color:#777;margin-bottom:2px">${esc(f.icon)} ${esc(f.label)}</div>
+      <div style="font-size:11pt;font-weight:700;color:${f.color}">${esc(f.band)}</div>
+      ${f.score ? `<div style="font-size:7.5pt;color:#777;margin-top:2px">${esc(f.score)}</div>` : ''}
     </div>`).join('');
 
   const strainRows = ranked.length ? ranked.map((s, i) => `
