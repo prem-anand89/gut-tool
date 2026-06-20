@@ -59,10 +59,10 @@ export function printReport(visit, patient) {
   const sl = sleepBand(ex.sleepScore ?? null);
   const pn = painBand(ex.nrsPain ?? null);
   const driverDefs = [
-    ['Stress (PSS-4)', ps ? ps.l : '—', ps ? ps.c : '#999'],
-    ['Sleep', sl ? sl.l : '—', sl ? sl.c : '#999'],
-    ['Pain (NRS)', pn ? pn.l : '—', pn ? pn.c : '#999'],
-    ['Stool (Bristol)', ex.bristol != null ? ('Type ' + ex.bristol) : '—', '#15140f'],
+    ['🧠 Stress (PSS-4)', ps ? ps.l : '—', ps ? ps.c : '#999'],
+    ['😴 Sleep (Sleep-4)', sl ? sl.l : '—', sl ? sl.c : '#999'],
+    ['⚡ Pain (NRS)', pn ? pn.l : '—', pn ? pn.c : '#999'],
+    ['🫙 Bristol stool', ex.bristol != null ? ('Type ' + ex.bristol) : '—', '#15140f'],
   ];
   const driverCards = driverDefs.map(([label, val, color]) => `
     <div style="flex:1;min-width:110px;border:1px solid #e0ddd6;border-radius:6px;padding:8px 10px;text-align:center">

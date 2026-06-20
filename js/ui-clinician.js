@@ -246,10 +246,10 @@ function driversCard() {
   const card = el('div', { class: 'card' });
   card.appendChild(el('h3', {}, 'Modifiable drivers'));
   const g = el('div', { class: 'drivers', style: 'margin-top:8px' });
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">Stress (PSS-4)</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">Sleep</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">Pain (NRS)</div>`));
-  g.appendChild(el('div', { class: 'driver' }, `<div class="dv">${ex.bristol ?? '—'}</div><div class="dl">Bristol type</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">🧠 Stress (PSS-4)</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">😴 Sleep (Sleep-4)</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">⚡ Pain (NRS)</div>`));
+  g.appendChild(el('div', { class: 'driver' }, `<div class="dv">${ex.bristol != null ? 'Type ' + ex.bristol : '—'}</div><div class="dl">🫙 Bristol stool</div>`));
   card.appendChild(g);
   return card;
 }

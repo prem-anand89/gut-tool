@@ -8,6 +8,7 @@
 import { severityOf, indexPct } from './scoring.js';
 import { SECTIONS, sectionMax } from './schema.js';
 import { pss4Band, sleepBand, painBand } from './scales.js';
+import { PATTERNS } from './patterns.js';
 import { el, esc, fmtDate, toast, dialogForm, dialogConfirm } from './util.js';
 
 let ctx;
@@ -120,7 +121,7 @@ function renderDetail(root) {
     const ps = pss4Band(ex.pss4Score ?? null);
     const sl = sleepBand(ex.sleepScore ?? null);
     const pn = painBand(ex.nrsPain ?? null);
-    const factors = `Stress ${ps ? ps.l : '—'} · Sleep ${sl ? sl.l : '—'} · Pain ${pn ? pn.l : '—'} · Bristol ${ex.bristol ?? '—'}`;
+    const factors = `🧠 ${ps ? ps.l : '—'} · 😴 ${sl ? sl.l : '—'} · ⚡ ${pn ? pn.l : '—'} · 🫙 ${ex.bristol != null ? 'Type ' + ex.bristol : '—'}`;
 
     const card = el('div', { class: `visit-card${idx === 0 ? ' latest' : ''}` });
     card.appendChild(el('div', { class: 'visit-num' }, String(realIdx)));
@@ -139,12 +140,14 @@ function renderDetail(root) {
   });
 }
 
-// Simple progression chart of the Dysbiosis Index across visits.
+// Progression chart + domain breakdown table + pattern presence heatmap.
 function progressionCard(visits) {
   const card = el('div', { class: 'card' });
   card.appendChild(el('h2', {}, 'Progression'));
   card.appendChild(el('div', { class: 'q-sub' }, 'Dysbiosis Index across visits (lower is better).'));
-  const W = 640, H = 200, pad = 30;
+
+  // ── Total index line chart ──
+  const W = 640, H = 180, pad = 30;
   const pts = visits.map((v, i) => {
     const x = pad + (visits.length === 1 ? (W - 2 * pad) / 2 : i * (W - 2 * pad) / (visits.length - 1));
     const y = H - pad - (indexPct(v.total) / 100) * (H - 2 * pad);
@@ -164,5 +167,64 @@ function progressionCard(visits) {
   });
   svg += '</svg>';
   card.appendChild(el('div', { class: 'prog-svg' }, svg));
+
+  // ── Domain-by-domain table ──
+  card.appendChild(el('h3', { style: 'margin-top:16px;margin-bottom:6px' }, 'Domain breakdown over visits'));
+  const domTbl = buildDomainTable(visits);
+  card.appendChild(domTbl);
+
+  // ── Pattern presence heatmap ──
+  const allPats = PATTERNS.filter(p => visits.some(v => (v.patterns || []).includes(p.id)));
+  if (allPats.length) {
+    card.appendChild(el('h3', { style: 'margin-top:16px;margin-bottom:6px' }, 'Pattern presence over visits'));
+    card.appendChild(buildPatternTable(visits, allPats));
+  }
+
   return card;
+}
+
+function buildDomainTable(visits) {
+  const colW = visits.length;
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">`;
+  html += `<tr><th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ddd">Domain</th>`;
+  visits.forEach((v, i) => {
+    const prev = visits[i - 1];
+    const delta = prev != null ? (v.total - prev.total) : null;
+    const dStr = delta != null ? ` <span style="color:${delta < 0 ? '#0F6E56' : delta > 0 ? '#B91C1C' : '#888'}">${delta < 0 ? '▼' : delta > 0 ? '▲' : '='}${Math.abs(delta)}</span>` : '';
+    html += `<th style="text-align:center;padding:4px 6px;border-bottom:1px solid #ddd;white-space:nowrap">#${i + 1}${dStr}</th>`;
+  });
+  html += '</tr>';
+  SECTIONS.forEach(s => {
+    const max = sectionMax(s.id);
+    html += `<tr><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:4px"></span>${esc(s.full)}</td>`;
+    visits.forEach((v, i) => {
+      const sc = (v.secScores || {})[s.id] ?? 0;
+      const pct = Math.round(sc / max * 100);
+      const prev = visits[i - 1];
+      const prevSc = prev ? ((prev.secScores || {})[s.id] ?? 0) : null;
+      const d = prevSc != null ? sc - prevSc : null;
+      const dStr = d != null && d !== 0 ? ` <span style="color:${d < 0 ? '#0F6E56' : '#B91C1C'};font-size:9px">${d < 0 ? '▼' : '▲'}${Math.abs(d)}</span>` : '';
+      html += `<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f0f0f0"><span style="color:${s.color};font-weight:600">${sc}/${max}</span>${dStr}<br><span style="color:#999;font-size:9px">${pct}%</span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  return el('div', {}, html);
+}
+
+function buildPatternTable(visits, allPats) {
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">`;
+  html += `<tr><th style="text-align:left;padding:4px 6px;border-bottom:1px solid #ddd">Pattern</th>`;
+  visits.forEach((_, i) => { html += `<th style="text-align:center;padding:4px 6px;border-bottom:1px solid #ddd">#${i + 1}</th>`; });
+  html += '</tr>';
+  allPats.forEach(p => {
+    html += `<tr><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;white-space:nowrap">${p.emoji} <span style="color:${p.color}">${esc(p.label)}</span></td>`;
+    visits.forEach(v => {
+      const on = (v.patterns || []).includes(p.id);
+      html += `<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f0f0f0">${on ? `<span style="color:${p.color};font-weight:700">✓</span>` : '<span style="color:#ccc">–</span>'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  return el('div', {}, html);
 }

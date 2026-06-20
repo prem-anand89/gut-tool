@@ -70,7 +70,7 @@ export function render() {
   });
 
   root.appendChild(bristolCard());
-  root.appendChild(instrumentCard('Stress (PSS-4)', PSS4_ITEMS, PSS4_ANCHORS, 'pss4'));
+  root.appendChild(instrumentCard('Stress (PSS-4)', PSS4_ITEMS, PSS4_ANCHORS, 'pss4', true));
   root.appendChild(sleepCard());
   root.appendChild(painCard());
 
@@ -120,18 +120,25 @@ function bristolCard() {
   return card;
 }
 
-function instrumentCard(title, items, anchors, key) {
+// PSS-4 anchors are 0-4; map to colour classes s0..s3
+const PSS4_COLOR = ['s0', 's0', 's1', 's2', 's3'];
+
+function instrumentCard(title, items, anchors, key, compact = false) {
   const card = el('div', { class: 'sec-card' });
   card.appendChild(el('div', { class: 'sec-head', style: 'background:#534AB7' }, esc(title)));
   const body = el('div', { class: 'sec-body' });
   items.forEach((q, qi) => {
     const row = el('div', { class: 'q' });
     row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q)));
-    const opts = el('div', { class: 'opts' });
+    const optsStyle = compact ? 'flex-wrap:nowrap;gap:4px' : '';
+    const opts = el('div', { class: 'opts', style: optsStyle });
     anchors.forEach((lab, v) => {
       const sel = extras[key][qi] === v;
-      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
-      b.onclick = () => { extras[key][qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
+      const col = PSS4_COLOR[v] || 's1';
+      const btnStyle = compact ? 'min-width:0;flex:1;font-size:11px;padding:6px 4px' : '';
+      const b = el('button', { class: `opt${sel ? ` sel ${col}` : ''}`, type: 'button', style: btnStyle },
+        `<span class="on">${v}</span>${esc(lab)}`);
+      b.onclick = () => { extras[key][qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', ...PSS4_COLOR)); b.classList.add('sel', col); };
       opts.appendChild(b);
     });
     row.appendChild(opts);
@@ -143,7 +150,7 @@ function instrumentCard(title, items, anchors, key) {
 
 function sleepCard() {
   const card = el('div', { class: 'sec-card' });
-  card.appendChild(el('div', { class: 'sec-head', style: 'background:#185FA5' }, 'Sleep quality'));
+  card.appendChild(el('div', { class: 'sec-head', style: 'background:#185FA5' }, 'Sleep quality (Sleep-4)'));
   const body = el('div', { class: 'sec-body' });
   SLEEP_ITEMS.forEach((q, qi) => {
     const row = el('div', { class: 'q' });
@@ -151,8 +158,8 @@ function sleepCard() {
     const opts = el('div', { class: 'opts' });
     q.a.forEach((lab, v) => {
       const sel = extras.sleep[qi] === v;
-      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
-      b.onclick = () => { extras.sleep[qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
+      const b = el('button', { class: `opt${sel ? ` sel s${v}` : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      b.onclick = () => { extras.sleep[qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's0', 's1', 's2', 's3')); b.classList.add('sel', `s${v}`); };
       opts.appendChild(b);
     });
     row.appendChild(opts);
@@ -259,10 +266,10 @@ function calc() {
   const driv = el('div', { class: 'card' });
   driv.appendChild(el('h2', {}, 'Modifiable drivers'));
   const dg = el('div', { class: 'drivers' });
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">Stress (PSS-4)</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">Sleep</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">Pain (NRS)</div>`));
-  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv">${extras.bristol ?? '—'}</div><div class="dl">Bristol type</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${ps ? ps.c : '#999'}">${ps ? ps.l : '—'}</div><div class="dl">🧠 Stress (PSS-4)</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${sl ? sl.c : '#999'}">${sl ? sl.l : '—'}</div><div class="dl">😴 Sleep (Sleep-4)</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv" style="color:${pn ? pn.c : '#999'}">${pn ? pn.l : '—'}</div><div class="dl">⚡ Pain (NRS)</div>`));
+  dg.appendChild(el('div', { class: 'driver' }, `<div class="dv">${extras.bristol != null ? 'Type ' + extras.bristol : '—'}</div><div class="dl">🫙 Bristol stool</div>`));
   driv.appendChild(dg);
   out.appendChild(driv);
 
