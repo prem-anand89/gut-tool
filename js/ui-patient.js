@@ -15,15 +15,47 @@ import { el, esc, toast } from './util.js';
 let ctx;
 let answers = {};                          // id -> 0..3
 let extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+let editingVisit = null;                   // set when reviewing/editing a saved visit
 
 export function init(appCtx) { ctx = appCtx; }
 
+// Start a fresh questionnaire (the ONLY place in-progress answers are cleared —
+// tab navigation no longer wipes state, so mid-questionnaire switching is safe).
+export function reset() {
+  answers = {};
+  extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+  editingVisit = null;
+}
+
+// Load a saved visit's answers/extras into the form for review or editing.
+// Pre-selection happens in render() (each builder marks the matching option).
+export function loadVisit(visit) {
+  reset();
+  editingVisit = visit;
+  const arr = Array.isArray(visit.answers) ? visit.answers : [];
+  QUESTIONS.forEach((q, i) => { if (arr[i] != null) answers[q.id] = arr[i]; });
+  const ex = visit.extras || {};
+  extras = {
+    bristol: ex.bristol ?? null,
+    pss4: Array.isArray(ex.pss4) ? ex.pss4.slice() : [null, null, null, null],
+    sleep: Array.isArray(ex.sleep) ? ex.sleep.slice() : [null, null, null, null],
+    nrsPain: ex.nrsPain ?? null,
+    painRegion: ex.painRegion ?? null,
+  };
+}
+
 export function render() {
-  answers = {}; extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+  // NOTE: state is intentionally NOT reset here — render() runs on every tab
+  // switch, so resetting would silently wipe an in-progress questionnaire.
+  // New/edit flows call reset()/loadVisit() before switching in.
   const root = document.getElementById('mode-patient');
   root.innerHTML = '';
+  const p = ctx.activePatient && ctx.activePatient();
+  const who = p
+    ? `<b>Patient:</b> ${esc(p.name || 'Patient')}${editingVisit ? ' · <span style="color:var(--am);font-weight:700">editing a saved visit</span>' : ''}<br>`
+    : '';
   root.appendChild(el('div', { class: 'intro' },
-    `<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
+    `${who}<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
     `Your responses produce a Dysbiosis Index your clinician will review. This is an educational screening tool, not a diagnosis.`));
 
   // Symptom sections
@@ -55,7 +87,8 @@ function questionRow(q) {
   if (q.patientSub) row.appendChild(el('div', { class: 'q-sub' }, esc(q.patientSub)));
   const opts = el('div', { class: 'opts' });
   labels.forEach((lab, v) => {
-    const b = el('button', { class: `opt s${v}`, dataset: { q: q.id, v }, type: 'button' },
+    const sel = answers[q.id] === v ? ' sel' : '';
+    const b = el('button', { class: `opt s${v}${sel}`, dataset: { q: q.id, v }, type: 'button' },
       `<span class="on">${v}</span>${esc(lab)}`);
     b.onclick = () => {
       answers[q.id] = v;
@@ -75,7 +108,8 @@ function bristolCard() {
   body.appendChild(el('div', { class: 'q-sub' }, 'Pick the type that best matches your usual stool.'));
   const grid = el('div', { class: 'bristol-grid' });
   BRISTOL_TYPES.forEach(t => {
-    const b = el('button', { class: 'bristol-opt', type: 'button' },
+    const sel = extras.bristol === t.n ? ' sel' : '';
+    const b = el('button', { class: `bristol-opt${sel}`, type: 'button' },
       `<span class="bristol-n" style="background:${t.col}">${t.n}</span>
        <span><b>${esc(t.label)}</b> · <span class="muted">${esc(t.sub)}</span><br><small style="color:${t.col}">${esc(t.tag)}</small></span>`);
     b.onclick = () => { extras.bristol = t.n; grid.querySelectorAll('.bristol-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
@@ -95,7 +129,8 @@ function instrumentCard(title, items, anchors, key) {
     row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q)));
     const opts = el('div', { class: 'opts' });
     anchors.forEach((lab, v) => {
-      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      const sel = extras[key][qi] === v;
+      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
       b.onclick = () => { extras[key][qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
       opts.appendChild(b);
     });
@@ -115,7 +150,8 @@ function sleepCard() {
     row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q.t)));
     const opts = el('div', { class: 'opts' });
     q.a.forEach((lab, v) => {
-      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      const sel = extras.sleep[qi] === v;
+      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
       b.onclick = () => { extras.sleep[qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
       opts.appendChild(b);
     });
@@ -134,7 +170,8 @@ function painCard() {
   const nrs = el('div', { class: 'nrs-row' });
   const regWrap = el('div', { style: 'margin-top:10px' });
   for (let v = 0; v <= 10; v++) {
-    const b = el('button', { class: 'nrs-opt', type: 'button' }, String(v));
+    const sel = extras.nrsPain === v ? ' sel' : '';
+    const b = el('button', { class: `nrs-opt${sel}`, type: 'button' }, String(v));
     b.onclick = () => {
       extras.nrsPain = v; nrs.querySelectorAll('.nrs-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
       regWrap.style.display = v > 0 ? 'block' : 'none';
@@ -142,11 +179,12 @@ function painCard() {
     nrs.appendChild(b);
   }
   body.appendChild(nrs);
-  regWrap.style.display = 'none';
+  regWrap.style.display = extras.nrsPain > 0 ? 'block' : 'none';
   regWrap.appendChild(el('div', { class: 'grp-label' }, 'Where?'));
   const chips = el('div', { class: 'chips' });
   PAIN_REGIONS.forEach(r => {
-    const b = el('button', { class: 'chip-opt', type: 'button' }, esc(r.label));
+    const sel = extras.painRegion === r.id ? ' sel' : '';
+    const b = el('button', { class: `chip-opt${sel}`, type: 'button' }, esc(r.label));
     b.onclick = () => { extras.painRegion = r.id; chips.querySelectorAll('.chip-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
     chips.appendChild(b);
   });
@@ -166,7 +204,11 @@ function buildVisit() {
   const fired = detectPatterns(secScores, answerArr, detectExtras);
   const patternIds = fired.map(p => p.id);
   return {
-    date: Date.now(), source: 'patient',
+    // Carry the original id/date when editing so saving updates in place
+    // instead of creating a duplicate visit.
+    id: editingVisit ? editingVisit.id : undefined,
+    date: editingVisit ? (editingVisit.date || Date.now()) : Date.now(),
+    source: editingVisit ? 'patient (edited)' : 'patient',
     answers: answerArr,
     extras: { ...extras, pss4Score: ps, sleepScore: ss },
     secScores, bands, total,

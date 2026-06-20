@@ -10,6 +10,7 @@ import { severityOf, indexPct } from './scoring.js';
 import { patternById } from './patterns.js';
 import { rankStrains } from './strains.js';
 import { deriveClinicianFlags } from './clinician-derive.js';
+import { pss4Band, sleepBand, painBand } from './scales.js';
 import { esc, fmtDate } from './util.js';
 
 export function printReport(visit, patient) {
@@ -44,12 +45,30 @@ export function printReport(visit, patient) {
       <span style="text-align:right">${sc}/${max}</span></div>`;
   }).join('');
 
+  // Patient-facing report → plain-language patientDesc (not clinician `desc`).
   const patternCards = patterns.length ? patterns.map(p => `
     <div class="rcard">
       <h4 style="color:${p.color};font-size:9.5pt;margin-bottom:3px">${p.emoji} ${esc(p.label)}</h4>
-      <div style="font-size:8.5pt;color:#333;line-height:1.5">${esc(p.desc)}</div>
+      <div style="font-size:8.5pt;color:#333;line-height:1.5">${esc(p.patientDesc)}</div>
       <div style="font-size:8pt;color:#185FA5;margin-top:4px"><b>Suggested tests:</b> ${p.tests.map(esc).join(' · ')}</div>
     </div>`).join('') : '<div style="font-size:9pt;color:#777">No specific patterns flagged at this visit.</div>';
+
+  // Modifiable drivers (stress / sleep / pain / stool) from the visit's extras.
+  const ex = visit.extras || {};
+  const ps = pss4Band(ex.pss4Score ?? null);
+  const sl = sleepBand(ex.sleepScore ?? null);
+  const pn = painBand(ex.nrsPain ?? null);
+  const driverDefs = [
+    ['Stress (PSS-4)', ps ? ps.l : '—', ps ? ps.c : '#999'],
+    ['Sleep', sl ? sl.l : '—', sl ? sl.c : '#999'],
+    ['Pain (NRS)', pn ? pn.l : '—', pn ? pn.c : '#999'],
+    ['Stool (Bristol)', ex.bristol != null ? ('Type ' + ex.bristol) : '—', '#15140f'],
+  ];
+  const driverCards = driverDefs.map(([label, val, color]) => `
+    <div style="flex:1;min-width:110px;border:1px solid #e0ddd6;border-radius:6px;padding:8px 10px;text-align:center">
+      <div style="font-size:11pt;font-weight:700;color:${color}">${esc(val)}</div>
+      <div style="font-size:7.5pt;color:#777;margin-top:2px">${esc(label)}</div>
+    </div>`).join('');
 
   const strainRows = ranked.length ? ranked.map((s, i) => `
     <tr><td>${i + 1}</td><td><b>${esc(s.name)}</b><br><span style="color:#666">${esc(s.indication)}</span></td>
@@ -67,6 +86,8 @@ export function printReport(visit, patient) {
       <div style="font-size:9pt;color:#3a3a37;margin-top:6px;line-height:1.5">${esc(sv.desc)}</div></div>
     </div>
     <h2>Domain breakdown</h2>${domainRows}
+    <h2>Modifiable drivers</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${driverCards}</div>
     <h2>Patterns to review with your clinician</h2>${patternCards}
     ${strainRows ? `<h2>Strain shortlist</h2><table><tr><th>#</th><th>Strain &amp; indication</th><th>Dose</th><th>India availability</th></tr>${strainRows}</table>` : ''}
     <div class="rfoot">

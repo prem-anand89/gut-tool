@@ -68,9 +68,9 @@ const html = `<!DOCTYPE html>
   <div class="app-logo"><span class="dot"></span>Beyond Mechanics <span class="app-sub">Gut Suite</span></div>
   <div class="app-spacer"></div>
   <div class="mode-switch" id="modeSwitch">
-    <button class="mode-btn" data-mode="patient">Patient</button>
+    <button class="mode-btn" data-mode="patient">Questionnaire</button>
     <button class="mode-btn" data-mode="clinician">Clinician</button>
-    <button class="mode-btn active" data-mode="database">Patients</button>
+    <button class="mode-btn active" data-mode="database">Patient Records</button>
   </div>
   <div class="app-chip empty" id="activeChip" style="display:none"><span class="nm" id="activeName"></span><button class="x" id="activeClear">✕</button></div>
 </header>

@@ -7,6 +7,7 @@
 
 import { severityOf, indexPct } from './scoring.js';
 import { SECTIONS, sectionMax } from './schema.js';
+import { pss4Band, sleepBand, painBand } from './scales.js';
 import { el, esc, fmtDate, toast, dialogForm, dialogConfirm } from './util.js';
 
 let ctx;
@@ -28,7 +29,7 @@ function renderList(root) {
   search.oninput = () => filter(search.value.toLowerCase());
   bar.appendChild(search);
   bar.appendChild(el('button', { class: 'btn btn-g', onclick: newPatient }, '+ New patient'));
-  bar.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.setMode('patient') }, 'New questionnaire'));
+  bar.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.newQuestionnaire() }, 'New questionnaire'));
   bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.exportDB }, 'Export backup'));
   bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.importDB }, 'Import / merge'));
   root.appendChild(bar);
@@ -71,9 +72,9 @@ function paintCards(list) {
        <div class="pt-meta">${p.ref ? 'Ref ' + esc(p.ref) + ' · ' : ''}${p.dob ? esc(p.dob) : ''}</div></div>`));
     card.appendChild(el('div', { class: 'pt-stats' },
       `<div class="pt-stat"><div class="v">${visits.length}</div><div class="l">Visits</div></div>
-       <div class="pt-stat"><div class="v">${latest ? indexPct(latest.total) + '%' : '—'}</div><div class="l">Latest index</div></div>
+       <div class="pt-stat"><div class="v">${latest ? indexPct(latest.total) + '%' : '—'}</div><div class="l">${latest ? 'Index · ' + latest.total + '/120' : 'Latest index'}</div></div>
        <div class="pt-stat"><div class="v" style="font-size:12px;color:${sev ? sev.color : '#999'}">${sev ? esc(sev.label) : '—'}</div><div class="l">${delta || 'Severity'}</div></div>`));
-    card.onclick = () => { view = { mode: 'detail', patientId: p.id }; render(); };
+    card.onclick = () => { ctx.setActive(p.id); view = { mode: 'detail', patientId: p.id }; render(); };
     grid.appendChild(card);
   });
 }
@@ -101,7 +102,7 @@ function renderDetail(root) {
   const head = el('div', { class: 'row', style: 'margin-bottom:14px' });
   head.appendChild(el('button', { class: 'back-btn', onclick: showList }, '← All patients'));
   head.appendChild(el('h1', { style: 'flex:1' }, esc(p.name || 'Unnamed') + (p.ref ? ` <small class="muted">Ref ${esc(p.ref)}</small>` : '')));
-  head.appendChild(el('button', { class: 'btn btn-o', onclick: () => { ctx.setActive(p.id); ctx.setMode('patient'); } }, '+ New questionnaire'));
+  head.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.newQuestionnaire(p.id) }, '+ New questionnaire'));
   root.appendChild(head);
 
   const visits = (p.visits || []).slice().sort((a, b) => (a.date || 0) - (b.date || 0));
@@ -115,14 +116,24 @@ function renderDetail(root) {
     const prev = visits[visits.length - idx - 2];
     let delta = '';
     if (prev) { const d = v.total - prev.total; const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : 'delta-flat'; delta = `<span class="${cls}">${d < 0 ? '▼' : d > 0 ? '▲' : '='}${Math.abs(d)}</span>`; }
+    const ex = v.extras || {};
+    const ps = pss4Band(ex.pss4Score ?? null);
+    const sl = sleepBand(ex.sleepScore ?? null);
+    const pn = painBand(ex.nrsPain ?? null);
+    const factors = `Stress ${ps ? ps.l : '—'} · Sleep ${sl ? sl.l : '—'} · Pain ${pn ? pn.l : '—'} · Bristol ${ex.bristol ?? '—'}`;
+
     const card = el('div', { class: `visit-card${idx === 0 ? ' latest' : ''}` });
     card.appendChild(el('div', { class: 'visit-num' }, String(realIdx)));
     card.appendChild(el('div', { class: 'visit-info' },
-      `<div class="visit-date">${fmtDate(v.date)}</div><div class="visit-sub">${esc(v.source || '')} · <code>${esc(v.code || '')}</code></div>`));
-    card.appendChild(el('div', { class: 'visit-score' }, `<div class="v">${indexPct(v.total)}%</div><div class="l">Index</div>`));
+      `<div class="visit-date">${fmtDate(v.date)}</div>
+       <div class="visit-sub">${esc(v.source || '')} · <code>${esc(v.code || '')}</code></div>
+       <div class="visit-sub">${esc(factors)}</div>`));
+    // Score value AND % shown together.
+    card.appendChild(el('div', { class: 'visit-score' }, `<div class="v">${indexPct(v.total)}%</div><div class="l">${v.total}/120</div>`));
     card.appendChild(el('span', { class: 'pill ' + sev.cls }, esc(sev.label)));
     if (delta) card.appendChild(el('div', { style: 'font-weight:700' }, delta));
-    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v) }, 'Open in clinician'));
+    if (v.answers) card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.editVisit(v, p.id) }, 'Edit answers'));
+    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v, p.id) }, 'Open in clinician'));
     card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.printReport(v) }, 'Print'));
     root.appendChild(card);
   });

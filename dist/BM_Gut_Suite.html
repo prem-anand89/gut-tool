@@ -232,9 +232,9 @@ h1{font-size:22px}h2{font-size:17px;margin-bottom:8px}h3{font-size:14px}
   <div class="app-logo"><span class="dot"></span>Beyond Mechanics <span class="app-sub">Gut Suite</span></div>
   <div class="app-spacer"></div>
   <div class="mode-switch" id="modeSwitch">
-    <button class="mode-btn" data-mode="patient">Patient</button>
+    <button class="mode-btn" data-mode="patient">Questionnaire</button>
     <button class="mode-btn" data-mode="clinician">Clinician</button>
-    <button class="mode-btn active" data-mode="database">Patients</button>
+    <button class="mode-btn active" data-mode="database">Patient Records</button>
   </div>
   <div class="app-chip empty" id="activeChip" style="display:none"><span class="nm" id="activeName"></span><button class="x" id="activeClear">✕</button></div>
 </header>
@@ -283,11 +283,29 @@ const ctx = {
   setActive(id) { App.activeId = id; updateChip(); },
   saveVisit,
   openClinicianWithVisit,
+  newQuestionnaire,
+  editVisit,
   printReport: (visit) => printReport(visit, ctx.activePatient()),
   exportDB,
   importDB,
   refresh,
 };
+
+// Start a fresh questionnaire (optionally scoped to a specific patient).
+function newQuestionnaire(patientId) {
+  if (patientId != null) App.activeId = patientId;
+  Patient.reset();
+  setMode('patient');
+  updateChip();
+}
+
+// Load a saved visit's answers into the questionnaire for review / editing.
+function editVisit(visit, patientId) {
+  if (patientId != null) App.activeId = patientId;
+  Patient.loadVisit(visit);
+  setMode('patient');
+  updateChip();
+}
 
 function setMode(name) {
   App.mode = name;
@@ -314,43 +332,61 @@ function updateChip() {
 async function saveVisit(snapshot) {
   // Normalise: questionnaire-sourced visits recompute cleanly; manual clinician
   // visits (no answers) keep their entered bands.
+  // Preserve the snapshot's id (set when editing an existing visit) so the save
+  // updates in place; only mint a new id for genuinely new visits.
   let visit = snapshot.answers
     ? recomputeVisit(snapshot)
-    : { ...snapshot, id: uid(), schemaVersion: SCHEMA_VERSION, severity: severityOf(snapshot.total || 0).label };
+    : { ...snapshot, id: snapshot.id || uid(), schemaVersion: SCHEMA_VERSION, severity: severityOf(snapshot.total || 0).label };
   if (!visit.id) visit.id = uid();
 
   let patient = ctx.activePatient();
+  let askedViaForm = false;
   if (!patient) {
     const r = await dialogForm('Save visit — which patient?', [
       { key: 'name', label: 'Patient name (new or existing)', placeholder: 'Name' },
       { key: 'ref', label: 'Reference / ID', placeholder: 'optional' },
     ], { okLabel: 'Save visit' });
     if (!r || !r.name) return;
+    askedViaForm = true;
     patient = App.db.patients.find(p => (p.name || '').toLowerCase() === r.name.toLowerCase());
     if (!patient) {
       patient = { id: uid(), name: r.name, ref: r.ref || '', dob: '', sex: '', notes: '', created: Date.now(), visits: [] };
       App.db.patients.push(patient);
     }
     App.activeId = patient.id;
-  } else {
-    if (!(await dialogConfirm(`Save this visit to ${patient.name}?`, { title: 'Save visit', okLabel: 'Save' }))) return;
   }
 
   patient.visits = patient.visits || [];
-  patient.visits.push(visit);
+  const existingIdx = patient.visits.findIndex(v => v.id === visit.id);
+  const isUpdate = existingIdx >= 0;
+
+  // Confirm for an already-active patient (the picker form is its own confirm).
+  // Phrased so an in-place update is never a silent surprise.
+  if (!askedViaForm) {
+    const msg = isUpdate
+      ? `Update this existing visit for ${patient.name}? (Overwrites the saved answers and results for this session.)`
+      : `Save this visit to ${patient.name}?`;
+    if (!(await dialogConfirm(msg, { title: isUpdate ? 'Update visit' : 'Save visit', okLabel: isUpdate ? 'Update' : 'Save' }))) return;
+  }
+
+  if (isUpdate) patient.visits[existingIdx] = visit;
+  else patient.visits.push(visit);
   patient.visits.sort((a, b) => (a.date || 0) - (b.date || 0));
-  App.db.meta.visitsSinceExport = (App.db.meta.visitsSinceExport || 0) + 1;
+  if (!isUpdate) App.db.meta.visitsSinceExport = (App.db.meta.visitsSinceExport || 0) + 1;
   ctx.persist();
   updateChip();
-  toast(`Visit saved to ${patient.name}`);
+  toast(isUpdate ? `Visit updated for ${patient.name}` : `Visit saved to ${patient.name}`);
   Database.showList();
   setMode('database');
   maybeRemindExport();
 }
 
-function openClinicianWithVisit(visit) {
-  setMode('clinician');
+function openClinicianWithVisit(visit, patientId) {
+  if (patientId != null) App.activeId = patientId;
+  // Load state BEFORE switching in, so the first render shows the visit.
   Clinician.loadVisit(visit);
+  setMode('clinician');
+  updateChip();
 }
 
 // ── Export (stamped) ────────────────────────────────────────────────────────
@@ -797,6 +833,7 @@ const { severityOf, indexPct } = __req('scoring.js');
 const { patternById } = __req('patterns.js');
 const { rankStrains } = __req('strains.js');
 const { deriveClinicianFlags } = __req('clinician-derive.js');
+const { pss4Band, sleepBand, painBand } = __req('scales.js');
 const { esc, fmtDate } = __req('util.js');
 
 function printReport(visit, patient) {
@@ -831,12 +868,30 @@ function printReport(visit, patient) {
       <span style="text-align:right">${sc}/${max}</span></div>`;
   }).join('');
 
+  // Patient-facing report → plain-language patientDesc (not clinician `desc`).
   const patternCards = patterns.length ? patterns.map(p => `
     <div class="rcard">
       <h4 style="color:${p.color};font-size:9.5pt;margin-bottom:3px">${p.emoji} ${esc(p.label)}</h4>
-      <div style="font-size:8.5pt;color:#333;line-height:1.5">${esc(p.desc)}</div>
+      <div style="font-size:8.5pt;color:#333;line-height:1.5">${esc(p.patientDesc)}</div>
       <div style="font-size:8pt;color:#185FA5;margin-top:4px"><b>Suggested tests:</b> ${p.tests.map(esc).join(' · ')}</div>
     </div>`).join('') : '<div style="font-size:9pt;color:#777">No specific patterns flagged at this visit.</div>';
+
+  // Modifiable drivers (stress / sleep / pain / stool) from the visit's extras.
+  const ex = visit.extras || {};
+  const ps = pss4Band(ex.pss4Score ?? null);
+  const sl = sleepBand(ex.sleepScore ?? null);
+  const pn = painBand(ex.nrsPain ?? null);
+  const driverDefs = [
+    ['Stress (PSS-4)', ps ? ps.l : '—', ps ? ps.c : '#999'],
+    ['Sleep', sl ? sl.l : '—', sl ? sl.c : '#999'],
+    ['Pain (NRS)', pn ? pn.l : '—', pn ? pn.c : '#999'],
+    ['Stool (Bristol)', ex.bristol != null ? ('Type ' + ex.bristol) : '—', '#15140f'],
+  ];
+  const driverCards = driverDefs.map(([label, val, color]) => `
+    <div style="flex:1;min-width:110px;border:1px solid #e0ddd6;border-radius:6px;padding:8px 10px;text-align:center">
+      <div style="font-size:11pt;font-weight:700;color:${color}">${esc(val)}</div>
+      <div style="font-size:7.5pt;color:#777;margin-top:2px">${esc(label)}</div>
+    </div>`).join('');
 
   const strainRows = ranked.length ? ranked.map((s, i) => `
     <tr><td>${i + 1}</td><td><b>${esc(s.name)}</b><br><span style="color:#666">${esc(s.indication)}</span></td>
@@ -854,6 +909,8 @@ function printReport(visit, patient) {
       <div style="font-size:9pt;color:#3a3a37;margin-top:6px;line-height:1.5">${esc(sv.desc)}</div></div>
     </div>
     <h2>Domain breakdown</h2>${domainRows}
+    <h2>Modifiable drivers</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${driverCards}</div>
     <h2>Patterns to review with your clinician</h2>${patternCards}
     ${strainRows ? `<h2>Strain shortlist</h2><table><tr><th>#</th><th>Strain &amp; indication</th><th>Dose</th><th>India availability</th></tr>${strainRows}</table>` : ''}
     <div class="rfoot">
@@ -1785,6 +1842,7 @@ function blankState() {
     syms: new Set(), conds: new Set(), meds: new Set(), fromIntake: new Set(),
     extras: null, rawAnswers: null, patterns: [],
     patientName: '', notes: '', activeTab: 'patterns',
+    editingId: null, editingDate: null,
   };
 }
 
@@ -1810,6 +1868,9 @@ function loadVisit(visit) {
   state.rawAnswers = visit.answers || null;
   state.extras = visit.extras || null;
   state.notes = visit.notes || '';
+  // Remember the source visit so re-saving updates it in place (no duplicate).
+  state.editingId = visit.id || null;
+  state.editingDate = visit.date || null;
   if (visit.answers) {
     const d = deriveClinicianFlags(visit.answers, visit.extras);
     state.syms = d.syms; state.meds = d.meds; state.fromIntake = d.fromIntake;
@@ -1822,7 +1883,9 @@ function render() {
   const root = document.getElementById('mode-clinician');
   root.innerHTML = '';
 
+  const p = ctx.activePatient && ctx.activePatient();
   root.appendChild(el('div', { class: 'gate-note' },
+    `${p ? `<b>Patient:</b> ${esc(p.name || 'Patient')}<br>` : ''}` +
     `<b>Clinician view — for physician co-management.</b> Protocols below include prescription-only agents (Rifaximin, etc.) ` +
     `and drug-interaction calls. This is decision-support for review by a prescribing clinician before anything reaches a patient — not patient-facing instructions.`));
 
@@ -2093,7 +2156,11 @@ function buildSnapshot() {
   const secScores = SECTIONS.reduce((o, s) => { o[s.id] = domainScore(s.id); return o; }, {});
   const total = totalScore();
   return {
-    date: Date.now(), source: state.rawAnswers ? 'clinician (from intake)' : 'clinician',
+    // Carry the loaded visit's id/date so saving updates it in place rather
+    // than creating a duplicate; mint fresh for a brand-new manual entry.
+    id: state.editingId || undefined,
+    date: state.editingDate || Date.now(),
+    source: state.rawAnswers ? 'clinician (from intake)' : 'clinician',
     answers: state.rawAnswers || null,
     extras: state.extras || {},
     secScores, bands: { ...state.bands }, total,
@@ -2119,6 +2186,7 @@ __modules['ui-database.js'] = function(__e){
 
 const { severityOf, indexPct } = __req('scoring.js');
 const { SECTIONS, sectionMax } = __req('schema.js');
+const { pss4Band, sleepBand, painBand } = __req('scales.js');
 const { el, esc, fmtDate, toast, dialogForm, dialogConfirm } = __req('util.js');
 
 let ctx;
@@ -2140,7 +2208,7 @@ function renderList(root) {
   search.oninput = () => filter(search.value.toLowerCase());
   bar.appendChild(search);
   bar.appendChild(el('button', { class: 'btn btn-g', onclick: newPatient }, '+ New patient'));
-  bar.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.setMode('patient') }, 'New questionnaire'));
+  bar.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.newQuestionnaire() }, 'New questionnaire'));
   bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.exportDB }, 'Export backup'));
   bar.appendChild(el('button', { class: 'btn btn-gh', onclick: ctx.importDB }, 'Import / merge'));
   root.appendChild(bar);
@@ -2183,9 +2251,9 @@ function paintCards(list) {
        <div class="pt-meta">${p.ref ? 'Ref ' + esc(p.ref) + ' · ' : ''}${p.dob ? esc(p.dob) : ''}</div></div>`));
     card.appendChild(el('div', { class: 'pt-stats' },
       `<div class="pt-stat"><div class="v">${visits.length}</div><div class="l">Visits</div></div>
-       <div class="pt-stat"><div class="v">${latest ? indexPct(latest.total) + '%' : '—'}</div><div class="l">Latest index</div></div>
+       <div class="pt-stat"><div class="v">${latest ? indexPct(latest.total) + '%' : '—'}</div><div class="l">${latest ? 'Index · ' + latest.total + '/120' : 'Latest index'}</div></div>
        <div class="pt-stat"><div class="v" style="font-size:12px;color:${sev ? sev.color : '#999'}">${sev ? esc(sev.label) : '—'}</div><div class="l">${delta || 'Severity'}</div></div>`));
-    card.onclick = () => { view = { mode: 'detail', patientId: p.id }; render(); };
+    card.onclick = () => { ctx.setActive(p.id); view = { mode: 'detail', patientId: p.id }; render(); };
     grid.appendChild(card);
   });
 }
@@ -2213,7 +2281,7 @@ function renderDetail(root) {
   const head = el('div', { class: 'row', style: 'margin-bottom:14px' });
   head.appendChild(el('button', { class: 'back-btn', onclick: showList }, '← All patients'));
   head.appendChild(el('h1', { style: 'flex:1' }, esc(p.name || 'Unnamed') + (p.ref ? ` <small class="muted">Ref ${esc(p.ref)}</small>` : '')));
-  head.appendChild(el('button', { class: 'btn btn-o', onclick: () => { ctx.setActive(p.id); ctx.setMode('patient'); } }, '+ New questionnaire'));
+  head.appendChild(el('button', { class: 'btn btn-o', onclick: () => ctx.newQuestionnaire(p.id) }, '+ New questionnaire'));
   root.appendChild(head);
 
   const visits = (p.visits || []).slice().sort((a, b) => (a.date || 0) - (b.date || 0));
@@ -2227,14 +2295,24 @@ function renderDetail(root) {
     const prev = visits[visits.length - idx - 2];
     let delta = '';
     if (prev) { const d = v.total - prev.total; const cls = d < 0 ? 'delta-down' : d > 0 ? 'delta-up' : 'delta-flat'; delta = `<span class="${cls}">${d < 0 ? '▼' : d > 0 ? '▲' : '='}${Math.abs(d)}</span>`; }
+    const ex = v.extras || {};
+    const ps = pss4Band(ex.pss4Score ?? null);
+    const sl = sleepBand(ex.sleepScore ?? null);
+    const pn = painBand(ex.nrsPain ?? null);
+    const factors = `Stress ${ps ? ps.l : '—'} · Sleep ${sl ? sl.l : '—'} · Pain ${pn ? pn.l : '—'} · Bristol ${ex.bristol ?? '—'}`;
+
     const card = el('div', { class: `visit-card${idx === 0 ? ' latest' : ''}` });
     card.appendChild(el('div', { class: 'visit-num' }, String(realIdx)));
     card.appendChild(el('div', { class: 'visit-info' },
-      `<div class="visit-date">${fmtDate(v.date)}</div><div class="visit-sub">${esc(v.source || '')} · <code>${esc(v.code || '')}</code></div>`));
-    card.appendChild(el('div', { class: 'visit-score' }, `<div class="v">${indexPct(v.total)}%</div><div class="l">Index</div>`));
+      `<div class="visit-date">${fmtDate(v.date)}</div>
+       <div class="visit-sub">${esc(v.source || '')} · <code>${esc(v.code || '')}</code></div>
+       <div class="visit-sub">${esc(factors)}</div>`));
+    // Score value AND % shown together.
+    card.appendChild(el('div', { class: 'visit-score' }, `<div class="v">${indexPct(v.total)}%</div><div class="l">${v.total}/120</div>`));
     card.appendChild(el('span', { class: 'pill ' + sev.cls }, esc(sev.label)));
     if (delta) card.appendChild(el('div', { style: 'font-weight:700' }, delta));
-    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v) }, 'Open in clinician'));
+    if (v.answers) card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.editVisit(v, p.id) }, 'Edit answers'));
+    card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.openClinicianWithVisit(v, p.id) }, 'Open in clinician'));
     card.appendChild(el('button', { class: 'btn btn-gh', onclick: () => ctx.printReport(v) }, 'Print'));
     root.appendChild(card);
   });
@@ -2289,15 +2367,47 @@ const { el, esc, toast } = __req('util.js');
 let ctx;
 let answers = {};                          // id -> 0..3
 let extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+let editingVisit = null;                   // set when reviewing/editing a saved visit
 
 function init(appCtx) { ctx = appCtx; }
 
+// Start a fresh questionnaire (the ONLY place in-progress answers are cleared —
+// tab navigation no longer wipes state, so mid-questionnaire switching is safe).
+function reset() {
+  answers = {};
+  extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+  editingVisit = null;
+}
+
+// Load a saved visit's answers/extras into the form for review or editing.
+// Pre-selection happens in render() (each builder marks the matching option).
+function loadVisit(visit) {
+  reset();
+  editingVisit = visit;
+  const arr = Array.isArray(visit.answers) ? visit.answers : [];
+  QUESTIONS.forEach((q, i) => { if (arr[i] != null) answers[q.id] = arr[i]; });
+  const ex = visit.extras || {};
+  extras = {
+    bristol: ex.bristol ?? null,
+    pss4: Array.isArray(ex.pss4) ? ex.pss4.slice() : [null, null, null, null],
+    sleep: Array.isArray(ex.sleep) ? ex.sleep.slice() : [null, null, null, null],
+    nrsPain: ex.nrsPain ?? null,
+    painRegion: ex.painRegion ?? null,
+  };
+}
+
 function render() {
-  answers = {}; extras = { bristol: null, pss4: [null, null, null, null], sleep: [null, null, null, null], nrsPain: null, painRegion: null };
+  // NOTE: state is intentionally NOT reset here — render() runs on every tab
+  // switch, so resetting would silently wipe an in-progress questionnaire.
+  // New/edit flows call reset()/loadVisit() before switching in.
   const root = document.getElementById('mode-patient');
   root.innerHTML = '';
+  const p = ctx.activePatient && ctx.activePatient();
+  const who = p
+    ? `<b>Patient:</b> ${esc(p.name || 'Patient')}${editingVisit ? ' · <span style="color:var(--am);font-weight:700">editing a saved visit</span>' : ''}<br>`
+    : '';
   root.appendChild(el('div', { class: 'intro' },
-    `<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
+    `${who}<b>Gut Health Questionnaire.</b> Answer each item as honestly as you can — there are no right answers. ` +
     `Your responses produce a Dysbiosis Index your clinician will review. This is an educational screening tool, not a diagnosis.`));
 
   // Symptom sections
@@ -2329,7 +2439,8 @@ function questionRow(q) {
   if (q.patientSub) row.appendChild(el('div', { class: 'q-sub' }, esc(q.patientSub)));
   const opts = el('div', { class: 'opts' });
   labels.forEach((lab, v) => {
-    const b = el('button', { class: `opt s${v}`, dataset: { q: q.id, v }, type: 'button' },
+    const sel = answers[q.id] === v ? ' sel' : '';
+    const b = el('button', { class: `opt s${v}${sel}`, dataset: { q: q.id, v }, type: 'button' },
       `<span class="on">${v}</span>${esc(lab)}`);
     b.onclick = () => {
       answers[q.id] = v;
@@ -2349,7 +2460,8 @@ function bristolCard() {
   body.appendChild(el('div', { class: 'q-sub' }, 'Pick the type that best matches your usual stool.'));
   const grid = el('div', { class: 'bristol-grid' });
   BRISTOL_TYPES.forEach(t => {
-    const b = el('button', { class: 'bristol-opt', type: 'button' },
+    const sel = extras.bristol === t.n ? ' sel' : '';
+    const b = el('button', { class: `bristol-opt${sel}`, type: 'button' },
       `<span class="bristol-n" style="background:${t.col}">${t.n}</span>
        <span><b>${esc(t.label)}</b> · <span class="muted">${esc(t.sub)}</span><br><small style="color:${t.col}">${esc(t.tag)}</small></span>`);
     b.onclick = () => { extras.bristol = t.n; grid.querySelectorAll('.bristol-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
@@ -2369,7 +2481,8 @@ function instrumentCard(title, items, anchors, key) {
     row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q)));
     const opts = el('div', { class: 'opts' });
     anchors.forEach((lab, v) => {
-      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      const sel = extras[key][qi] === v;
+      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
       b.onclick = () => { extras[key][qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
       opts.appendChild(b);
     });
@@ -2389,7 +2502,8 @@ function sleepCard() {
     row.appendChild(el('div', { class: 'q-txt', style: 'font-weight:500' }, esc(q.t)));
     const opts = el('div', { class: 'opts' });
     q.a.forEach((lab, v) => {
-      const b = el('button', { class: 'opt', type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
+      const sel = extras.sleep[qi] === v;
+      const b = el('button', { class: `opt${sel ? ' sel s1' : ''}`, type: 'button' }, `<span class="on">${v}</span>${esc(lab)}`);
       b.onclick = () => { extras.sleep[qi] = v; opts.querySelectorAll('.opt').forEach(o => o.classList.remove('sel', 's1')); b.classList.add('sel', 's1'); };
       opts.appendChild(b);
     });
@@ -2408,7 +2522,8 @@ function painCard() {
   const nrs = el('div', { class: 'nrs-row' });
   const regWrap = el('div', { style: 'margin-top:10px' });
   for (let v = 0; v <= 10; v++) {
-    const b = el('button', { class: 'nrs-opt', type: 'button' }, String(v));
+    const sel = extras.nrsPain === v ? ' sel' : '';
+    const b = el('button', { class: `nrs-opt${sel}`, type: 'button' }, String(v));
     b.onclick = () => {
       extras.nrsPain = v; nrs.querySelectorAll('.nrs-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
       regWrap.style.display = v > 0 ? 'block' : 'none';
@@ -2416,11 +2531,12 @@ function painCard() {
     nrs.appendChild(b);
   }
   body.appendChild(nrs);
-  regWrap.style.display = 'none';
+  regWrap.style.display = extras.nrsPain > 0 ? 'block' : 'none';
   regWrap.appendChild(el('div', { class: 'grp-label' }, 'Where?'));
   const chips = el('div', { class: 'chips' });
   PAIN_REGIONS.forEach(r => {
-    const b = el('button', { class: 'chip-opt', type: 'button' }, esc(r.label));
+    const sel = extras.painRegion === r.id ? ' sel' : '';
+    const b = el('button', { class: `chip-opt${sel}`, type: 'button' }, esc(r.label));
     b.onclick = () => { extras.painRegion = r.id; chips.querySelectorAll('.chip-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); };
     chips.appendChild(b);
   });
@@ -2440,7 +2556,11 @@ function buildVisit() {
   const fired = detectPatterns(secScores, answerArr, detectExtras);
   const patternIds = fired.map(p => p.id);
   return {
-    date: Date.now(), source: 'patient',
+    // Carry the original id/date when editing so saving updates in place
+    // instead of creating a duplicate visit.
+    id: editingVisit ? editingVisit.id : undefined,
+    date: editingVisit ? (editingVisit.date || Date.now()) : Date.now(),
+    source: editingVisit ? 'patient (edited)' : 'patient',
     answers: answerArr,
     extras: { ...extras, pss4Score: ps, sleepScore: ss },
     secScores, bands, total,
@@ -2516,7 +2636,7 @@ function calc() {
   out.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 }
 
-__e.init = init; __e.render = render;
+__e.init = init; __e.reset = reset; __e.loadVisit = loadVisit; __e.render = render;
 return __e;
 };
 

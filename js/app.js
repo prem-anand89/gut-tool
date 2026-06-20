@@ -29,11 +29,29 @@ const ctx = {
   setActive(id) { App.activeId = id; updateChip(); },
   saveVisit,
   openClinicianWithVisit,
+  newQuestionnaire,
+  editVisit,
   printReport: (visit) => printReport(visit, ctx.activePatient()),
   exportDB,
   importDB,
   refresh,
 };
+
+// Start a fresh questionnaire (optionally scoped to a specific patient).
+function newQuestionnaire(patientId) {
+  if (patientId != null) App.activeId = patientId;
+  Patient.reset();
+  setMode('patient');
+  updateChip();
+}
+
+// Load a saved visit's answers into the questionnaire for review / editing.
+function editVisit(visit, patientId) {
+  if (patientId != null) App.activeId = patientId;
+  Patient.loadVisit(visit);
+  setMode('patient');
+  updateChip();
+}
 
 function setMode(name) {
   App.mode = name;
@@ -60,43 +78,61 @@ function updateChip() {
 async function saveVisit(snapshot) {
   // Normalise: questionnaire-sourced visits recompute cleanly; manual clinician
   // visits (no answers) keep their entered bands.
+  // Preserve the snapshot's id (set when editing an existing visit) so the save
+  // updates in place; only mint a new id for genuinely new visits.
   let visit = snapshot.answers
     ? recomputeVisit(snapshot)
-    : { ...snapshot, id: uid(), schemaVersion: SCHEMA_VERSION, severity: severityOf(snapshot.total || 0).label };
+    : { ...snapshot, id: snapshot.id || uid(), schemaVersion: SCHEMA_VERSION, severity: severityOf(snapshot.total || 0).label };
   if (!visit.id) visit.id = uid();
 
   let patient = ctx.activePatient();
+  let askedViaForm = false;
   if (!patient) {
     const r = await dialogForm('Save visit — which patient?', [
       { key: 'name', label: 'Patient name (new or existing)', placeholder: 'Name' },
       { key: 'ref', label: 'Reference / ID', placeholder: 'optional' },
     ], { okLabel: 'Save visit' });
     if (!r || !r.name) return;
+    askedViaForm = true;
     patient = App.db.patients.find(p => (p.name || '').toLowerCase() === r.name.toLowerCase());
     if (!patient) {
       patient = { id: uid(), name: r.name, ref: r.ref || '', dob: '', sex: '', notes: '', created: Date.now(), visits: [] };
       App.db.patients.push(patient);
     }
     App.activeId = patient.id;
-  } else {
-    if (!(await dialogConfirm(`Save this visit to ${patient.name}?`, { title: 'Save visit', okLabel: 'Save' }))) return;
   }
 
   patient.visits = patient.visits || [];
-  patient.visits.push(visit);
+  const existingIdx = patient.visits.findIndex(v => v.id === visit.id);
+  const isUpdate = existingIdx >= 0;
+
+  // Confirm for an already-active patient (the picker form is its own confirm).
+  // Phrased so an in-place update is never a silent surprise.
+  if (!askedViaForm) {
+    const msg = isUpdate
+      ? `Update this existing visit for ${patient.name}? (Overwrites the saved answers and results for this session.)`
+      : `Save this visit to ${patient.name}?`;
+    if (!(await dialogConfirm(msg, { title: isUpdate ? 'Update visit' : 'Save visit', okLabel: isUpdate ? 'Update' : 'Save' }))) return;
+  }
+
+  if (isUpdate) patient.visits[existingIdx] = visit;
+  else patient.visits.push(visit);
   patient.visits.sort((a, b) => (a.date || 0) - (b.date || 0));
-  App.db.meta.visitsSinceExport = (App.db.meta.visitsSinceExport || 0) + 1;
+  if (!isUpdate) App.db.meta.visitsSinceExport = (App.db.meta.visitsSinceExport || 0) + 1;
   ctx.persist();
   updateChip();
-  toast(`Visit saved to ${patient.name}`);
+  toast(isUpdate ? `Visit updated for ${patient.name}` : `Visit saved to ${patient.name}`);
   Database.showList();
   setMode('database');
   maybeRemindExport();
 }
 
-function openClinicianWithVisit(visit) {
-  setMode('clinician');
+function openClinicianWithVisit(visit, patientId) {
+  if (patientId != null) App.activeId = patientId;
+  // Load state BEFORE switching in, so the first render shows the visit.
   Clinician.loadVisit(visit);
+  setMode('clinician');
+  updateChip();
 }
 
 // ── Export (stamped) ────────────────────────────────────────────────────────

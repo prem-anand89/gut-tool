@@ -27,6 +27,7 @@ function blankState() {
     syms: new Set(), conds: new Set(), meds: new Set(), fromIntake: new Set(),
     extras: null, rawAnswers: null, patterns: [],
     patientName: '', notes: '', activeTab: 'patterns',
+    editingId: null, editingDate: null,
   };
 }
 
@@ -52,6 +53,9 @@ export function loadVisit(visit) {
   state.rawAnswers = visit.answers || null;
   state.extras = visit.extras || null;
   state.notes = visit.notes || '';
+  // Remember the source visit so re-saving updates it in place (no duplicate).
+  state.editingId = visit.id || null;
+  state.editingDate = visit.date || null;
   if (visit.answers) {
     const d = deriveClinicianFlags(visit.answers, visit.extras);
     state.syms = d.syms; state.meds = d.meds; state.fromIntake = d.fromIntake;
@@ -64,7 +68,9 @@ export function render() {
   const root = document.getElementById('mode-clinician');
   root.innerHTML = '';
 
+  const p = ctx.activePatient && ctx.activePatient();
   root.appendChild(el('div', { class: 'gate-note' },
+    `${p ? `<b>Patient:</b> ${esc(p.name || 'Patient')}<br>` : ''}` +
     `<b>Clinician view — for physician co-management.</b> Protocols below include prescription-only agents (Rifaximin, etc.) ` +
     `and drug-interaction calls. This is decision-support for review by a prescribing clinician before anything reaches a patient — not patient-facing instructions.`));
 
@@ -335,7 +341,11 @@ function buildSnapshot() {
   const secScores = SECTIONS.reduce((o, s) => { o[s.id] = domainScore(s.id); return o; }, {});
   const total = totalScore();
   return {
-    date: Date.now(), source: state.rawAnswers ? 'clinician (from intake)' : 'clinician',
+    // Carry the loaded visit's id/date so saving updates it in place rather
+    // than creating a duplicate; mint fresh for a brand-new manual entry.
+    id: state.editingId || undefined,
+    date: state.editingDate || Date.now(),
+    source: state.rawAnswers ? 'clinician (from intake)' : 'clinician',
     answers: state.rawAnswers || null,
     extras: state.extras || {},
     secScores, bands: { ...state.bands }, total,
